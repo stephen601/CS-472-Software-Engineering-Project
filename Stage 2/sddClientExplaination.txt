@@ -1,3 +1,7 @@
+Q: Are all the tickets the same price?
+Q: Taxes and other fees
+Q: Do users need to buy tickets for multiple shows in the same cart, do we need a cart system?
+
 SDD Overview:
 1. Introduction
 2. Design considerations
@@ -18,9 +22,12 @@ Date: 3/27/2022
 
 Overview:
 There are three main components:
+	App:
+		renderer(Renderer): The single instance of the Renderer
+		server(ServerInterOp): The single instance of the ServerInterOp
+		showManager(ShowManager): The single instance of the ShowManager
 
-
-	App: Relates to the visual UI 
+	Renderer: Relates to the visual UI 
 		The screens are:
 			SCREEN_LOGIN:
 				The user or admin logs in
@@ -29,7 +36,7 @@ There are three main components:
 			SCREEN_SEAT_LIST: 
 				Shows a grid of seats where the user can select multiple seats by touching/clicking them, then purchase them by clicking a buy button. Available seats are in white, unavailable ones are grey, selected are yellow.
 			SCREEN_PAYMENT_INFO:
-				Shows a screen where the user inputs their credit card, CSV, and exp date, then clicks buy. There should be visual icons of each of the major card providers, with all but Master Card and VISA crossed out. (TODO: Figure how know what provider a card came from)
+				Shows a screen where the user inputs their credit card, CSV, and exp date, then clicks buy. There should be visual icons of each of the major card providers, with all but MasterCard and VISA crossed out. (TODO: Figure how know what provider a card came from)
 				(TODO: Figure out how to avoid two people paying at the same time for the same seat)
 				Optionally: User can save or pick a saved card
 				Optionally: Cash payment
@@ -42,8 +49,6 @@ There are three main components:
 			SCREEN_REPORT:
 				A screen that dumps a huge filterable log of all the events
 		currentScreen(int): The current screen
-		server(ServerInterOp): The main instance of the ServerInterOp class
-		showManager(ShowManager): The main instance of the ShowManager class
 
 		changeScreen(newScreen:int): Changes the screen
 		updateScreen(): Updates the screen
@@ -52,12 +57,11 @@ There are three main components:
 
 	ServerInterOp: Interacts with the server and database
 		currentUserId(int):
-			The id of the currently logged in users, 0=nobody, -1=trying to login
+			The id of the currently logged in users, 0=nobody
 		isAdmin(bool): If you're the admin
-		showManager(ShowManager): A pointer to the main ShowManager
 
 		loadShowData():void: Attempts to update all show data
-		attemptSignIn(userName:String, pass:String):void: Attempts to sign in, sets currentUserId to -1, then either to a positive real user id, or back to 0 upon failure
+		attemptSignIn(userName:String, pass:String):void: Attempts to sign in, changes currentUserId and calls changeScreen
 		chargeCreditCard(number:String, csv:String, expDate:String, price:float):void:
 			Attempts to charge card, and calls changeScreen based off what happen.
 
@@ -83,5 +87,225 @@ There are three main components:
 		price(int): The price of the seat
 		ownerId(int): The current owner of the seat, 0 = unowned
 
-System architecture:
+Pseudocode:
 
+// This is the list of screen
+var SCREEN_NONE = -1;
+var SCREEN_LOGIN = 0;
+var SCREEN_WAITING_FOR_SEVER = 1;
+var SCREEN_SHOW_LIST = 2;
+var SCREEN_SEAT_LIST = 3;
+var SCREEN_PAYMENT_INFO = 4;
+var SCREEN_RECIPT = 5;
+var SCREEN_SHOW_EDITOR = 6;
+var SCREEN_SEAT_EDITOR = 7;
+var SCREEN_REPORT = 8;
+
+var app = {
+	renderer: {
+		currentScreen: SCREEN_NONE,
+		screenTime: 0,
+		userNameField: null,
+		passwordField: null,
+		logInButton: null,
+	},
+	showManager: {
+	},
+	server: {
+	}
+}
+
+function main() {
+	requestAnimationFrame(updateRenderer);
+}
+
+function updateRenderer() {
+	var elapsed = 1/60; // I should probably get the real refresh rate
+	var renderer = app.renderer;
+
+	var onFirstFrame = false;
+	if (renderer.screenTime == 0) onFirstFrame = true;
+
+	var onLastFrame = false; // @todo Make this actually work
+
+	//@todo Add back buttons!
+	if (renderer.currentScreen == SCREEN_LOGIN) {
+		if (onFirstFrame) { // On the first frame of the screen
+			// Creates the user name text field
+			var field = new PIXI.Text();
+			// Make the text field's width a percentage of the screen's width, to accommodate displays of all sizes
+			field.width = screen.width*0.3;
+			// Center the field horizontally
+			field.x = screen.width/2 - field.width/2;
+			// Center the field vertically
+			field.y = screen.height/2 - field.height/2;
+			// Add some initial text, this should be "hint text" later, which is text that appears faintly and is instantly erased when the user goes to input text
+			field.text = "username";
+			// Add the field to the stage
+			stage.addChild(field);
+			// Keep track of the refernce to the field
+			renderer.userNameField = field;
+
+			// Create the password field
+			field = new PIXI.Text();
+			field.width = screen.width*0.3;
+			field.x = screen.width/2 - field.width/2;
+			// This field goes below the user name field with some padding
+			field.y = renderer.userNameText.y + renderer.userNameText.height + 5;
+			field.text = "password";
+			stage.addChild(field);
+			renderer.passwordField = field;
+
+			// Add a log in button
+			var button = new PIXI.Sprite();
+			button.x = //...
+			button.y = //...
+			stage.addChild(button);
+			renderer.logInButton = button;
+		}
+
+		if (onLastFrame) { // On the last frame of the screen
+			// Remove the screen elements
+			stage.removeChild(app.renderer.userNameField);
+			stage.removeChild(app.renderer.passwordField);
+			stage.removeChild(app.renderer.logInButton);
+		}
+
+		// Every frame
+		if (spriteClicked(renderer.logInButton)) { // Check if the log in button was clicked
+			// Attempt a log in
+			server.attemptLogIn(renderer.userNameField.text, renderer.passwordField.text);
+			// Change to a waiting screen, the ServerInterOp will change our screen to something else when it's done
+			changeScreen(SCREEN_WAITING_FOR_SEVER);
+		}
+
+	} else if (renderer.currentScreen == SCREEN_SHOW_LIST) {
+		if (onFirstFrame) {
+		}
+		if (onLastFrame) {
+		}
+	} else if (renderer.currentScreen == SCREEN_SEAT_LIST) {
+		//@todo Create row and column label (A, B, C, 1, 2, 3...)
+		if (onFirstFrame) {
+			// Create a 12x8 seat sprites in the center of the screen
+			// Create the buy button
+			// If you're logged in as an admin
+			//	Create Edit Show button
+			//	Create Edit Seats button
+		}
+		if (onLastFrame) {
+			// Destroy the seat sprites
+			// Destroy the buy button
+			// If you're logged in as an admin
+			//	Destroy Edit Show button
+			//	Destroy Edit Seats button
+		}
+
+		// For each seat sprite
+		// Set the color of the seat based on its status (red=taken, green=avail, yellow=selected)
+		//	if the seat sprite was clicked
+		//		call selectSeat(seatIndex)
+
+		// If 0 seats are selected buy button is hidden
+		// If buy button was clicked
+		//	changeScreen(SCREEN_PAYMENT_INFO)
+
+		// If Edit Show button was clicked
+		//	changeScreen(SCREEN_SHOW_EDITOR)
+
+		// If 0 seats are selected Edit Seats button is hidden
+		// If Edit Seats button was clicked
+		//	changeScreen(SCREEN_SEAT_EDITOR)
+	} else if (renderer.currentScreen == SCREEN_PAYMENT_INFO) {
+		// @todo Figure out how to avoid double buys
+		// @todo We might also need address related infomation to charage a card!
+		if (onFirstFrame) {
+			// Create creditCardName field (hint: Name)
+			// Create creditCardNumber field (hint: CC#, maxChars: 16)
+			// Create creditCardCVV field (hint: CVV, maxChars: 3)
+			// Create creditCardDate date field
+			// Create creditCardZip field (hint: Zip)
+			// Create confirmButton
+		}
+		if (onLastFrame) {
+			// Destroy creditCardName field
+			// Destroy creditCardNumber field
+			// Destroy creditCardCVV field
+			// Destroy creditCardDate date field
+			// Destroy creditCardZip field
+			// Destroy confirmButton
+		}
+
+		// If confirm button was clicked
+		//	Maybe do simple card checks?
+		//	chargeCreditCard(allTheStuff)
+		//	changeScreen(SCREEN_WAITING_FOR_SEVER) // The server will send you back here or to SCREEN_RECIPT
+
+	} else if (renderer.currentScreen == SCREEN_RECIPT) {
+		if (onFirstFrame) {
+			// Create and setup recipt text field
+			// Create back button
+		}
+		if (onLastFrame) {
+			// Destroy recipt text field
+			// Destroy back button
+		}
+
+		// if back button was clicked
+		//	 changeScreen(SCREEN_SHOW_LIST)
+	} else if (renderer.currentScreen == SCREEN_SHOW_EDITOR) {
+		//@todo Figure out icons
+		if (onFirstFrame) {
+			// Create Show name text field
+			// Create Date date field
+			// Create Save button
+		}
+		if (onLastFrame) {
+			// Destroy Show name text field
+			// Destroy Date date field
+			// Destroy Save button
+		}
+
+		// if Save button was clicked
+		//	@todo Figure out how the admin saves show data
+		//	changeScreen(SCREEN_SEAT_LIST)
+	} else if (renderer.currentScreen == SCREEN_SEAT_EDITOR) {
+		if (onFirstFrame) {
+			// Create X seats selected static text field
+			// Create price text field
+			// Create save button
+		}
+		if (onLastFrame) {
+			// Destroy X seats selected static text field
+			// Destroy price text field
+			// Destroy save button
+		}
+
+		// If save button was clicked
+		//	@todo Figure out how to update the seat prices
+		//	changeScreen(SCREEN_SEAT_LIST)
+	} else if (renderer.currentScreen == SCREEN_REPORT) {
+		//@todo Do filters
+		if (onFirstFrame) {
+			// Create report static text field
+			// Create back button
+		}
+		if (onLastFrame) {
+			// Destroy report static text field
+			// Destroy back button
+		}
+	} else {
+		// Invalid screen
+	}
+
+	renderer.screenTime += elapsed;
+}
+
+function spriteClicked(sprite) {
+	return false; // @todo Figure how sprites get clicked
+}
+
+function changeScreen(newScreen) {
+	app.renderer.currentScreen = newScreen;
+	app.renderer.screenTime = 0;
+}
