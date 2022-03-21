@@ -1,0 +1,1 @@
+call %userProfile%\node_modules\.bin\jsdoc.cmd -c jsdocConf.json frontend/client.js -d docs
