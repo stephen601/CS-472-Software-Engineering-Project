@@ -1,38 +1,3 @@
-// todo:
-// Figure out how to make the docs a pdf
-
-/*
-This is the client side application for the Los Portalas movie ticket sales platform.
-The client side application is written in JavaScript, and will run in the user's web browsers.
-Both customers and admins are users.
-Customers will use this application to view current available shows and seats, and purchase them.
-Admins are the owners are the venue and will log in to add and adjust shows.
-
-The client will be a single page application written in "vanilla" JS prominently using the library PixiJs.
-The app will mainly consist of 4 global singletons.
-
-Ui: The module in charge of drawing to the screen and processing user input into actionable commands. Solely in charge of PixiJs.
-ShowManager: The module in holding the downloaded list of show and seats, all client-side show/seat data is held here.
-ServerInterOp: The module in charge of interacting with the server, downloads the show/seat data and stores it in the ShowManager, sends update and verification commands to the server.
-App: Just a struct that holds all 3 of the other modules.
-
-Each of these singletons will be initialized during an onload() callback within the main page's header. The relevant code for the singletons will be loaded from client.js and runClient() will be called.
-The runClient() function will simply start the update loop, further initialization will happen upon the first iteration of the update loop.
-
-The update loop contains one giant "switch/case-like" if-statement for each entry in the SCREENS enum, the ui module contains the currentScreen(ui.currentScreen) that dictates which branch is taken. Each branch is responsible for the display and input processing for its screen. Just before the branch is taken a boolean firstFrameOfScreen is declared and set to true if ui.screenTime==0, ui.screenTime is incremented at the end of each update loop.
-
-The intention is that each screen uses firstFrameOfScreen being true as a signal for it to call ui creation functions like createText(), and, createButton(). Then, monitor the state of the created elements for user interaction.
-
-When user action occurs, or some external event is received, changeScreen() can be used to change to a new screen. Ui elements do not need to be cleaned up, ui elements will be automatically removed at the top of the update loop.
-
-The fallowing is a list of screens and their functions:
-@todo enum table
-
-@todo describe log in process
-Once the user logs on or chooses to browse as a guest, the client will need to download the latest show and seat availability data. This will happen by calling ServerInterOp.loadShowData(), this function will make an XMLHttpRequest to a page server.php?action=load, this page will reply with all show and seat data, the layout of which has not yet been determined (probably CSV strings).
-
-*/
-
 /**
  * Enum for screens
  * @readonly
