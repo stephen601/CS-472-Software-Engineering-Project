@@ -38,6 +38,9 @@ var app = {
 		userNameField: null,
 		passwordField: null,
 		logInButton: null,
+		pixiStage: null,
+		pixiTextFields: [],
+		pixiSprites: []
 	},
 	showManager: {
 	},
