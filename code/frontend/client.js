@@ -1,3 +1,5 @@
+//@todo limit data sending size for server
+
 let SCREEN_NONE = 0;
 let SCREEN_LOGIN = 1;
 let SCREEN_WAITING_FOR_SERVER = 2;
@@ -73,7 +75,7 @@ let theaterCols = 12;
 
 function runClient() {
 	let pixiApp = new PIXI.Application({
-		width: 1280,
+		width: 1280, //@todo make this dynamically resizing
 		height: 720,
 		backgroundColor: 0x2980b9
 	});
@@ -130,6 +132,8 @@ function updateClient(delta) {
 			}, false);
 			//x.focus();
 			document.body.appendChild(app.inputHtmlElement);
+
+			//@todo Get a list of the shows
 			changeScreen(SCREEN_LOGIN);
 		}
 	} else if (ui.currentScreen == SCREEN_LOGIN) {
@@ -170,7 +174,7 @@ function updateClient(delta) {
 			for (let i = 0; i < showManager.shows.length; i++) {
 				let sprite = createTextButtonSprite(" ");
 				sprite.x = ui.size.x / 2 - sprite.width / 2;
-				sprite.y = yPos;
+				sprite.y = yPos; // This comment conflicts
 				yPos += sprite.height + 10;
 				ui.showButtons.push(sprite);
 			}
@@ -411,11 +415,14 @@ function attemptLogin(username, password) {
 	let xmlhttp = new XMLHttpRequest();
 	xmlhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) { // @todo(Jeru): Handle failure
-			console.log(this.responseText);
+			console.log(this.responseText); //@todo Parse and verify this
 			changeScreen(SCREEN_SHOW_LIST);
 		}
 	}
+	// -1: User doesn't exist
+	// 35, Jeru Sanders, jerusanders@gmail.com
 	//xmlhttp.open("GET", "login.html", true);
+	//@stp xmlhttp.onerror
 	xmlhttp.open("GET", "login.php?username="+username+"&password="+password, true);
 	xmlhttp.send();
 }
