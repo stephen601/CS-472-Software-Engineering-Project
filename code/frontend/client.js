@@ -170,12 +170,31 @@ function updateClient(delta) {
 			for (let i = 0; i < showManager.shows.length; i++) {
 				let sprite = createTextButtonSprite(" ");
 				sprite.x = ui.size.x / 2 - sprite.width / 2;
-				sprite.y = yPos;
+				sprite.y = yPos; //trying to lower the buttons so its not at the top center
 				yPos += sprite.height + 10;
 				ui.showButtons.push(sprite);
 			}
-		}
+			ui.addButton = createTextButtonSprite("+"); //creating add show button
+			ui.addButton.x = ui.size.x * 0.5 - ui.addButton.width / 2 + 200;
+			ui.addButton.y = ui.size.y - ui.addButton.height - 10;
 
+			ui.removeButton = createTextButtonSprite("-"); //creating remove show button
+			ui.removeButton.x = ui.size.x * 0.5 - ui.removeButton.width / 2 - 200;
+			ui.removeButton.y = ui.size.y - ui.removeButton.height - 10;
+		}
+		/*if (false) { //To make visible buttons only for admin *How to get result
+			ui.addButton.visible = false; //hiding add show button true
+			ui.removeButton.visible = false; //hiding remove show button if false 
+		} else {
+			ui.addButton.visible = true; //showing add show button if true
+			ui.removeButton.visible = true; //showing remove show button if true 
+		}*/
+		if (spriteClicked(ui.addButton)) { // if the button add show is clicked then.. 
+			console.log("add");//***Need solution to add show
+		}
+		if (spriteClicked(ui.removeButton)) { // if the button removed show is clicked then.. 
+			console.log("remove");//***Need solution to remove show
+		}
 		for (let i = 0; i < ui.showButtons.length; i++) {
 			let button = ui.showButtons[i];
 
