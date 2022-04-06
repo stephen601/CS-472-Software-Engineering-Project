@@ -6,8 +6,12 @@
 //@todo Pretty up the text fields some more
 //@todo Do transitions
 //@todo Do background for plain text fields
+//@todo Remove items from cart
+//@todo Add a cart button on the show list screen
+//@todo Make a popup message system
 
 let verboseLogging = false;
+let defaultFontSize = 40;
 
 let SCREEN_NONE = 0;
 let SCREEN_LOGIN = 1;
@@ -156,14 +160,13 @@ function updateClient(delta) {
 			//...
 		}
 	} else if (ui.currentScreen == SCREEN_LOGIN) {
+		//@stp Failed to login in general
 		if (onFirstFrame) {
 			//@server user creation
 			ui.userField = createInputTextField("username");
-
 			ui.passField = createInputTextField("password");
-
 			ui.loginButton = createTextButtonSprite("Login");
-			console.log(ui.loginButton.width);
+			ui.instantLogin = createTextButtonSprite("Instant login");
 		}
 		ui.userField.x = ui.size.x/2 - ui.userField.width/2;
 		ui.userField.y = ui.size.y*0.3 - ui.userField.height/2;
@@ -174,24 +177,29 @@ function updateClient(delta) {
 		ui.loginButton.x = ui.size.x / 2 - ui.loginButton.width / 2;
 		ui.loginButton.y = ui.passField.y + ui.passField.height + 10;
 
+		ui.instantLogin.x = ui.size.x / 2 - ui.instantLogin.width / 2;
+		ui.instantLogin.y = ui.loginButton.y + ui.loginButton.height + 10;
+
 		if (spriteClicked(ui.loginButton)) {
 			attemptLogin(ui.userField.text, ui.passField.text);
-			//@server login.php?username=Jeru&password=pass
-			//Fail: -1
-			//Sucess: UserID, isAdmin
+			changeScreen(SCREEN_WAITING_FOR_SERVER);
+		}
+
+		if (spriteClicked(ui.instantLogin)) {
+			attemptLogin("Jeru", "testPass");
 			changeScreen(SCREEN_WAITING_FOR_SERVER);
 		}
 	} else if (ui.currentScreen == SCREEN_WAITING_FOR_SERVER) {
+		//@stp Time out on this screen
 		if (onFirstFrame) {
 			ui.waitingText = createTextField();
 			ui.waitingText.text = "Waiting...";
-
-			changeScreen(SCREEN_SHOW_LIST); //@hack
 		}
 
 		ui.waitingText.x = ui.size.x / 2 - ui.waitingText.width / 2;
 		ui.waitingText.y = ui.size.y / 2 - ui.waitingText.height / 2;
 	} else if (ui.currentScreen == SCREEN_SHOW_LIST) {
+		//@stp What if there's too many shows to fit on the screen
 		if (onFirstFrame) {
 			ui.showButtons = [];
 
@@ -200,9 +208,9 @@ function updateClient(delta) {
 				let sprite = createTextButtonSprite(show.name);
 				ui.showButtons.push(sprite);
 			}
-			ui.addButton = createTextButtonSprite("Add show"); //creating add show button
+			ui.addButton = createTextButtonSprite("Add show");
 
-			ui.removeButton = createTextButtonSprite("-"); //creating remove show button
+			ui.cartButton = createTextButtonSprite("Cart");
 		}
 
 		ui.addButton.x = ui.size.x*0.8 - ui.addButton.width/2;
@@ -214,10 +222,10 @@ function updateClient(delta) {
 			//@todo Go to the edit show screen
 		}
 
-		ui.removeButton.x = ui.size.x*0.3 - ui.removeButton.width/2;
-		ui.removeButton.y = ui.size.y*0.9 - ui.removeButton.height;
-		if (spriteClicked(ui.removeButton)) { // if the button removed show is clicked then.. 
-			console.log("remove");//***Need solution to remove show
+		ui.cartButton.x = ui.size.x*0.3 - ui.cartButton.width/2;
+		ui.cartButton.y = ui.size.y*0.9 - ui.cartButton.height;
+		if (spriteClicked(ui.cartButton)) {
+			changeScreen(SCREEN_CART);
 		}
 
 		let yPos = 0;
@@ -239,6 +247,8 @@ function updateClient(delta) {
 			}
 		}
 	} else if (ui.currentScreen == SCREEN_SEAT_LIST) {
+		//@stp You could click the "add to card" button with no seats selected, but it's invisible to avoid this class of errors.
+		//@stp Is it possible to select too many seats?
 		if (onFirstFrame) {
 			showManager.currentSeatIndices = [];
 			ui.seatButtons = [];
@@ -314,6 +324,9 @@ function updateClient(delta) {
 		}
 
 	} else if (ui.currentScreen == SCREEN_CART) {
+		//@stp There could be too many items to display
+		//@stp You could buy with nothing in your cart
+		//@stp The title of the show could change while a ticket in your cart, what happens?
 		if (onFirstFrame) {
 			ui.cartEntrySprites = [];
 
@@ -350,6 +363,10 @@ function updateClient(delta) {
 		}
 
 	} else if (ui.currentScreen == SCREEN_PAYMENT_INFO) {
+		//@stp Check if card is expired
+		//@stp Check if number and name are valid
+		//@stp Card could be rejected for wrong brand
+		//@stp Card could be rejected for not enough money
 		if (onFirstFrame) {
 			//@server Possibly load saved credit card info
 			ui.nameField = createInputTextField("Name on card");
@@ -390,6 +407,8 @@ function updateClient(delta) {
 			//Fail: 0,reasonString
 		}
 	} else if (ui.currentScreen == SCREEN_RECEIPT) {
+		//@stp There could be too many items to display
+		//@stp Syncing show details if they changed
 		//@todo We need name, age, address, telephone, and email, but the user profile should already have that.
 		if (onFirstFrame) {
 			let show = showManager.shows[showManager.currentShowIndex];
@@ -431,6 +450,7 @@ function updateClient(delta) {
 			changeScreen(SCREEN_SHOW_LIST);
 		}
 	} else if (ui.currentScreen == SCREEN_SHOW_EDITOR) {
+		//@stp @todo
 		if (onFirstFrame) {
 
 		}
@@ -438,12 +458,14 @@ function updateClient(delta) {
 		//@server editShow.php?showId=3&showName=MyShowName&showDate=3248092347
 		// 1
 	} else if (ui.currentScreen == SCREEN_SEAT_EDITOR) {
+		//@stp @todo
 		if (onFirstFrame) {
 
 		}
 		//@server editSeats.php?showId=3&seats=2,52,26,12&price=5
 		// 1
 	} else if (ui.currentScreen == SCREEN_REPORT) {
+		//@stp @todo
 		if (onFirstFrame) {
 			//@server getAllReceipts.php
 		}
@@ -469,6 +491,7 @@ function updateClient(delta) {
 
 			if (spriteClicked(field)) ui.selectedInputField = field;
 
+			//@stp What if the user types a weird character
 			while (app.ui.keysPressed.length > 0) {
 				let key = app.ui.keysPressed.shift();
 				if (ui.selectedInputField) {
@@ -494,20 +517,20 @@ function changeScreen(newScreen) {
 }
 
 function createTextField() {
-	let field = new PIXI.Text();
+	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 	app.pixiApp.stage.addChild(field);
 	app.ui.pixiFields.push(field);
 	return field;
 }
 
 function createInputTextField(hintText) {
-	if (verboseLogging) console.log("Input text field created");
+	if (verboseLogging) console.log("Input text field created"); //@stp What if you accidently create a sprite every frame? Then you'll see this log message
 	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
 	sprite.tint = 0xFFE0E0E0;
 	app.pixiApp.stage.addChild(sprite);
 	app.ui.pixiInputFieldBackgrounds.push(sprite);
 
-	let field = new PIXI.Text();
+	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 	field.text = hintText;
 	app.pixiApp.stage.addChild(field);
 	app.ui.pixiInputFields.push(field);
@@ -515,7 +538,7 @@ function createInputTextField(hintText) {
 }
 
 function createTextButtonSprite(text) {
-	let field = new PIXI.Text();
+	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 	field.text = text;
 
 	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
@@ -560,17 +583,36 @@ function spriteClicked(sprite) {
 }
 
 function attemptLogin(username, password) {
+	//@stp Test login case sensitivity
+	//False<br> Username does not exist.
 	let xmlhttp = new XMLHttpRequest();
 	xmlhttp.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) { // @todo(Jeru): Handle failure
-			console.log(this.responseText); //@todo Parse and verify this
-			changeScreen(SCREEN_SHOW_LIST);
+		if (this.readyState == 4) {
+			if (this.status <= 99 || this.status >= 400) {
+				app.userId = 0;
+				console.log("There was problem connecting");
+				//@todo Do a popup message saying there was a problem contacting the server
+				changeScreen(SCREEN_LOGIN);
+			} else if (this.status == 200) {
+				let prefix = this.responseText.substring(0, 4);
+				if (prefix == "True") {
+					let colonIndex = this.responseText.indexOf(":");
+					if (colonIndex == -1) console.log("No colon?!"); //@stp
+					let numberStr = this.responseText.substring(colonIndex+2);
+					app.userId = parseInt(numberStr);
+					//@todo Make a "Welcome <user>" message
+					changeScreen(SCREEN_SHOW_LIST);
+				} else if (prefix == "Fals") {
+					console.log("Wrong creds"); //@todo Do a popup message
+					changeScreen(SCREEN_LOGIN);
+				} else {
+					console.log("Bad output: "+this.responseText);
+				}
+			}
 		}
 	}
-	// -1: User doesn't exist
-	// 35, Jeru Sanders, jerusanders@gmail.com
 	//xmlhttp.open("GET", "login.html", true);
-	//@stp xmlhttp.onerror
+	//@stp xmlhttp.onerror and this.status
 	xmlhttp.open("GET", "includes/login.inc.php?username="+username+"&password="+password, true);
 	xmlhttp.send();
 }
