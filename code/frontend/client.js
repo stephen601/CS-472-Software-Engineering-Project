@@ -26,38 +26,39 @@ let SCREEN_REPORT = 10;
 
 let app = {};
 app.pixiApp = null;
-app.ui = {};
-app.ui.size = {};
-app.ui.mouse = {};
-app.ui.mouseDown = false;
-app.ui.mouseJustDown = false;
-app.ui.mouseJustUp = false;
-app.ui.keysPressed = [];
-app.ui.size.x = 0;
-app.ui.size.y = 0;
-app.ui.pixiFields = [];
-app.ui.pixiInputFields = [];
-app.ui.pixiInputFieldBackgrounds = [];
-app.ui.pixiSprites = [];
-app.ui.selectedInputField = null;
 
-app.ui.prevScreen = -1;
-app.ui.currentScreen = SCREEN_NONE;
+let ui = {};
+ui.size = {};
+ui.mouse = {};
+ui.mouseDown = false;
+ui.mouseJustDown = false;
+ui.mouseJustUp = false;
+ui.size.x = 0;
+ui.size.y = 0;
+ui.pixiFields = [];
+ui.pixiInputFields = [];
+ui.pixiInputFieldBackgrounds = [];
+ui.pixiSprites = [];
 
-app.ui.popup = null;
-app.ui.popupTime = 0;
+ui.selectedInputField = null;
 
-app.ui.stageSprite = null;
+ui.prevScreen = -1;
+ui.currentScreen = SCREEN_NONE;
 
-app.showManager = {};
-app.showManager.shows = [];
-app.showManager.currentShowIndex = 0;
-app.showManager.currentSeatIndices = [];
+ui.popup = null;
+ui.popupTime = 0;
+
+ui.stageSprite = null;
+
+let showManager = {};
+showManager.shows = [];
+showManager.currentShowIndex = 0;
+showManager.currentSeatIndices = [];
 
 let cart = [];
 
-let theaterRows = 8;
-let theaterCols = 12;
+let THEATER_ROWS = 8;
+let THEATER_COLS = 12;
 
 {
 	let show = {};
@@ -70,7 +71,7 @@ let theaterCols = 12;
 		//seat.id = 
 	}
 
-	app.showManager.shows.push(show);
+	showManager.shows.push(show);
 }
 
 {
@@ -80,7 +81,7 @@ let theaterCols = 12;
 	show.date = new Date("April 2, 2022 09:24:00");
 	show.seats = [];
 
-	app.showManager.shows.push(show);
+	showManager.shows.push(show);
 }
 
 {
@@ -90,7 +91,7 @@ let theaterCols = 12;
 	show.date = new Date("April 5, 2022 03:24:00");
 	show.seats = [];
 
-	app.showManager.shows.push(show);
+	showManager.shows.push(show);
 }
 
 
@@ -104,12 +105,53 @@ function runClient() {
 
 	pixiApp.ticker.add(updateClient);
 	app.pixiApp = pixiApp;
+
+	ui.stageSprite = new PIXI.Sprite.from("assets/white.png");
+	app.pixiApp.stage.addChild(ui.stageSprite);
+	ui.stageSprite.tint = 0xFF262626;
+
+	ui.stageSprite.interactive = true;
+	ui.stageSprite.on("mousemove", function(e) {
+		ui.mouse.x = e.data.global.x;
+		ui.mouse.y = e.data.global.y;
+	});
+	ui.stageSprite.on("pointerdown", function(e) {
+		ui.mouseJustDown = true;
+		ui.mouseDown = true;
+	});
+	ui.stageSprite.on("pointerup", function(e) {
+		ui.mouseJustUp = true;
+		ui.mouseDown = false;
+	});
+	ui.stageSprite.on("touchmove", function(e) {
+		ui.mouse.x = e.data.global.x;
+		ui.mouse.y = e.data.global.y;
+	});
+	ui.stageSprite.on("touchstart", function(e) {
+		ui.mouse.x = e.data.global.x;
+		ui.mouse.y = e.data.global.y;
+		ui.mouseJustDown = true;
+		ui.mouseDown = true;
+	});
+	ui.stageSprite.on("touchend", function(e) {
+		ui.mouseJustUp = true;
+		ui.mouseDown = false;
+	});
+
+	// Create invisible text field
+	app.inputHtmlElement = document.createElement("INPUT");
+	app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; width: 100%; height: 10%; opacity: 0%"); //@todo Make this unclickable
+	document.body.appendChild(app.inputHtmlElement);
+
+	//@server loadShows.php?after=2525278934
+	//ShowID1, ShowName1, ShowDate1
+	//ShowID2, ShowName2, ShowDate2
+	//...
+
+	changeScreen(SCREEN_LOGIN);
 }
 
 function updateClient(delta) {
-	let ui = app.ui;
-	let showManager = app.showManager;
-
 	let elapsed = 1/60;
 
 	ui.size.x = app.pixiApp.screen.width;
@@ -137,57 +179,6 @@ function updateClient(delta) {
 	}
 
 	if (ui.currentScreen == SCREEN_NONE) {
-		if (onFirstFrame) {
-			ui.stageSprite = new PIXI.Sprite.from("assets/white.png");
-			app.pixiApp.stage.addChild(ui.stageSprite);
-			ui.stageSprite.tint = 0xFF262626;
-
-			ui.stageSprite.interactive = true;
-			ui.stageSprite.on("mousemove", function(e) {
-				app.ui.mouse.x = e.data.global.x;
-				app.ui.mouse.y = e.data.global.y;
-			});
-			ui.stageSprite.on("pointerdown", function(e) {
-				app.ui.mouseJustDown = true;
-				app.ui.mouseDown = true;
-			});
-			ui.stageSprite.on("pointerup", function(e) {
-				app.ui.mouseJustUp = true;
-				app.ui.mouseDown = false;
-			});
-			ui.stageSprite.on("touchmove", function(e) {
-				app.ui.mouse.x = e.data.global.x;
-				app.ui.mouse.y = e.data.global.y;
-			});
-			ui.stageSprite.on("touchstart", function(e) {
-				app.ui.mouse.x = e.data.global.x;
-				app.ui.mouse.y = e.data.global.y;
-				app.ui.mouseJustDown = true;
-				app.ui.mouseDown = true;
-			});
-			ui.stageSprite.on("touchend", function(e) {
-				app.ui.mouseJustUp = true;
-				app.ui.mouseDown = false;
-			});
-
-			// Create invisible text field
-			app.inputHtmlElement = document.createElement("INPUT");
-			// app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; width: 1%; height: 1%; opacity: 0%");
-			app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; width: 100%; height: 10%; opacity: 0%");
-			// window.addEventListener("keydown", function(e) {
-			// 	if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 65 && e.keyCode <= 90) || e.key == "Backspace" || e.key == "Enter") {
-			// 		app.ui.keysPressed.push(e.key);
-			// 	}
-			// }, false);
-			document.body.appendChild(app.inputHtmlElement);
-
-			changeScreen(SCREEN_LOGIN);
-
-			//@server loadShows.php?after=2525278934
-			//ShowID1, ShowName1, ShowDate1
-			//ShowID2, ShowName2, ShowDate2
-			//...
-		}
 	} else if (ui.currentScreen == SCREEN_LOGIN) {
 		//@stp Failed to login in general
 		if (onFirstFrame) {
@@ -282,8 +273,8 @@ function updateClient(delta) {
 			showManager.currentSeatIndices = [];
 			ui.seatButtons = [];
 
-			for (let y = 0; y < theaterRows; y++) {
-				for (let x = 0; x < theaterCols; x++) {
+			for (let y = 0; y < THEATER_ROWS; y++) {
+				for (let x = 0; x < THEATER_COLS; x++) {
 					let button = createSeatSprite();
 					ui.seatButtons.push(button);
 				}
@@ -301,8 +292,8 @@ function updateClient(delta) {
 		for (let i = 0; i < 999; i++) {
 			seatWidth *= 0.9;
 			seatHeight *= 0.9;
-			totalWidth = (theaterCols * (seatWidth+pad));
-			totalHeight = (theaterRows * (seatHeight+pad));
+			totalWidth = (THEATER_COLS * (seatWidth+pad));
+			totalHeight = (THEATER_ROWS * (seatHeight+pad));
 			pad = seatWidth * 0.156;
 
 			if (
@@ -318,8 +309,8 @@ function updateClient(delta) {
 			let button = ui.seatButtons[i];
 			button.tint = 0xFFFFFF;
 
-			let x = i % theaterCols;
-			let y = Math.floor(i / theaterCols);
+			let x = i % THEATER_COLS;
+			let y = Math.floor(i / THEATER_COLS);
 			button.width = seatWidth;
 			button.height = seatHeight;
 			button.x = x * (button.width + pad) + offsetX;
@@ -542,18 +533,6 @@ function updateClient(delta) {
 
 			//@stp What if the user types a weird character
 			ui.selectedInputField.text = app.inputHtmlElement.value;
-			// while (app.ui.keysPressed.length > 0) {
-			// 	let key = app.ui.keysPressed.shift();
-			// 	if (ui.selectedInputField) {
-			// 		if (key == "Backspace") {
-			// 			ui.selectedInputField.text = ui.selectedInputField.text.substring(0, ui.selectedInputField.text.length-1);
-			// 		} else if (key == "Enter") {
-			// 			ui.selectedInputField = null;
-			// 		} else {
-			// 			ui.selectedInputField.text += key;
-			// 		}
-			// 	}
-			// }
 		}
 	}
 
@@ -571,19 +550,19 @@ function updateClient(delta) {
 		}
 	}
 
-	app.ui.mouseJustDown = false;
-	app.ui.mouseJustUp = false;
+	ui.mouseJustDown = false;
+	ui.mouseJustUp = false;
 }
 
 function changeScreen(newScreen) {
-	app.ui.currentScreen = newScreen;
-	app.ui.screenTime = 0;
+	ui.currentScreen = newScreen;
+	ui.screenTime = 0;
 }
 
 function createTextField() {
 	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 	app.pixiApp.stage.addChild(field);
-	app.ui.pixiFields.push(field);
+	ui.pixiFields.push(field);
 	return field;
 }
 
@@ -592,12 +571,12 @@ function createInputTextField(hintText) {
 	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
 	sprite.tint = 0xFFE0E0E0;
 	app.pixiApp.stage.addChild(sprite);
-	app.ui.pixiInputFieldBackgrounds.push(sprite);
+	ui.pixiInputFieldBackgrounds.push(sprite);
 
 	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 	field.text = hintText;
 	app.pixiApp.stage.addChild(field);
-	app.ui.pixiInputFields.push(field);
+	ui.pixiInputFields.push(field);
 	return field;
 }
 
@@ -613,7 +592,7 @@ function createTextButtonSprite(text) {
 	sprite.addChild(field);
 
 	app.pixiApp.stage.addChild(sprite);
-	app.ui.pixiSprites.push(sprite);
+	ui.pixiSprites.push(sprite);
 	return sprite;
 }
 
@@ -621,13 +600,11 @@ function createSeatSprite() {
 	// let sprite = new PIXI.Sprite.from("assets/seat.png");
 	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
 	app.pixiApp.stage.addChild(sprite);
-	app.ui.pixiSprites.push(sprite);
+	ui.pixiSprites.push(sprite);
 	return sprite;
 }
 
 function spriteClicked(sprite) {
-	let ui = app.ui;
-
 	if (!sprite.visible) return false;
 
 	let hoveringButton = false;
@@ -682,12 +659,10 @@ function attemptLogin(username, password) {
 }
 
 function selectShow(showIndex) {
-	app.showManager.currentShowIndex = showIndex;
+	showManager.currentShowIndex = showIndex;
 }
 
 function selectSeat(seatId) {
-	let showManager = app.showManager;
-
 	let index = showManager.currentSeatIndices.indexOf(seatId);
 
 	if (index == -1) {
@@ -702,7 +677,6 @@ function chargeCreditCard(cardName, cardNumber, cvv, expDate, amount) {
 }
 
 function showPopup(text) {
-	let ui = app.ui;
 	console.log("Popup: "+text);
 
 	if (ui.popup != null) {
@@ -727,8 +701,8 @@ function showPopup(text) {
 }
 
 function getShowById(id) {
-	for (let i = 0; i < app.showManager.shows.length; i++) {
-		let show = app.showManager.shows[i];
+	for (let i = 0; i < showManager.shows.length; i++) {
+		let show = showManager.shows[i];
 		if (show.id == id) return show;
 	}
 
@@ -737,8 +711,8 @@ function getShowById(id) {
 }
 
 function convertSeatIndexToString(seatIndex) {
-	let col = seatIndex % theaterCols;
-	let row = Math.floor(seatIndex / theaterCols);
+	let col = seatIndex % THEATER_COLS;
+	let row = Math.floor(seatIndex / THEATER_COLS);
 
 	let str = "";
 	str += String.fromCharCode(65 + row);
