@@ -173,10 +173,10 @@ function updateClient(delta) {
 
 	let onFirstFrame = false;
 	if (ui.prevScreen != ui.currentScreen) {
-		for (let i = 0; i < ui.pixiFields.length; i++) app.pixiApp.stage.removeChild(ui.pixiFields[i]);
-		for (let i = 0; i < ui.pixiInputFields.length; i++) app.pixiApp.stage.removeChild(ui.pixiInputFields[i]);
-		for (let i = 0; i < ui.pixiInputFieldBackgrounds.length; i++) app.pixiApp.stage.removeChild(ui.pixiInputFieldBackgrounds[i]);
-		for (let i = 0; i < ui.pixiSprites.length; i++) app.pixiApp.stage.removeChild(ui.pixiSprites[i]);
+		for (let i = 0; i < ui.pixiFields.length; i++) ui.stageSprite.removeChild(ui.pixiFields[i]);
+		for (let i = 0; i < ui.pixiInputFields.length; i++) ui.stageSprite.removeChild(ui.pixiInputFields[i]);
+		for (let i = 0; i < ui.pixiInputFieldBackgrounds.length; i++) ui.stageSprite.removeChild(ui.pixiInputFieldBackgrounds[i]);
+		for (let i = 0; i < ui.pixiSprites.length; i++) ui.stageSprite.removeChild(ui.pixiSprites[i]);
 		ui.pixiFields = [];
 		ui.pixiInputFields = [];
 		ui.pixiInputFieldBackgrounds = [];
@@ -546,7 +546,7 @@ function updateClient(delta) {
 				field.style.fill = 0x000000;
 			}
 
-			if (spriteClicked(field) && ui.selectedInputField != field) {
+			if (spriteClicked(bg) && ui.selectedInputField != field) {
 				ui.selectedInputField = field;
 				ui.selectedInputFieldTime = 0;
 
@@ -573,7 +573,7 @@ function updateClient(delta) {
 			let fadeTime = ui.popupTime - maxTime;
 			ui.popup.alpha = 1 - fadeTime;
 			if (ui.popup.alpha < 0) {
-				app.pixiApp.stage.removeChild(ui.popup);
+				ui.foregroundSprite.removeChild(ui.popup);
 				ui.popup = null;
 			}
 		}
@@ -708,7 +708,7 @@ function showPopup(text) {
 	console.log("Popup: "+text);
 
 	if (ui.popup != null) {
-		app.pixiApp.stage.removeChild(ui.popup);
+		ui.foregroundSprite.removeChild(ui.popup);
 		ui.popup = null;
 	}
 
@@ -725,7 +725,7 @@ function showPopup(text) {
 
 	ui.popupTime = 0;
 
-	ui.stageSprite.addChild(ui.popup);
+	ui.foregroundSprite.addChild(ui.popup);
 }
 
 function getShowById(id) {
