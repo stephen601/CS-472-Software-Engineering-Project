@@ -51,7 +51,9 @@ ui.currentScreen = SCREEN_NONE;
 ui.popup = null;
 ui.popupTime = 0;
 
+ui.bgSprite = null;
 ui.stageSprite = null;
+ui.foregroundSprite = null;
 
 let showManager = {};
 showManager.shows = [];
@@ -109,9 +111,15 @@ function runClient() {
 	pixiApp.ticker.add(updateClient);
 	app.pixiApp = pixiApp;
 
-	ui.stageSprite = new PIXI.Sprite.from("assets/white.png");
+	ui.stageSprite = new PIXI.Sprite();
 	app.pixiApp.stage.addChild(ui.stageSprite);
-	ui.stageSprite.tint = 0xFF262626;
+
+	ui.foregroundSprite = new PIXI.Sprite();
+	app.pixiApp.stage.addChild(ui.foregroundSprite);
+
+	ui.bgSprite = new PIXI.Sprite.from("assets/white.png");
+	ui.bgSprite.tint = 0xFF262626;
+	ui.stageSprite.addChild(ui.bgSprite);
 
 	ui.stageSprite.interactive = true;
 	ui.stageSprite.on("mousemove", function(e) {
@@ -147,7 +155,7 @@ function runClient() {
 	document.body.appendChild(app.inputHtmlElement);
 
 	ui.textCursorSprite = new PIXI.Sprite.from("assets/black.png");
-	app.pixiApp.stage.addChild(ui.textCursorSprite);
+	ui.foregroundSprite.addChild(ui.textCursorSprite);
 
 	//@server loadShows.php?after=2525278934
 	//ShowID1, ShowName1, ShowDate1
@@ -180,8 +188,8 @@ function updateClient(delta) {
 	}
 
 	if (ui.stageSprite != null) {
-		ui.stageSprite.width = ui.size.x;
-		ui.stageSprite.height = ui.size.y;
+		ui.bgSprite.width = ui.size.x;
+		ui.bgSprite.height = ui.size.y;
 	}
 
 	if (ui.currentScreen == SCREEN_NONE) {
@@ -509,21 +517,22 @@ function updateClient(delta) {
 	{ /// Update input field
 		ui.textCursorSprite.alpha = 0;
 		for (let i = 0; i < ui.pixiInputFields.length; i++) {
-			let sprite = ui.pixiInputFieldBackgrounds[i];
+			let bg = ui.pixiInputFieldBackgrounds[i];
 			let field = ui.pixiInputFields[i];
 
 			let pad = 5;
-			sprite.width = field.width + pad;
-			sprite.height = field.height + pad;
+			bg.width = field.width + pad;
+			if (bg.width < ui.size.x*0.25) bg.width = ui.size.x*0.25;
+			bg.height = field.height + pad;
 
-			sprite.x = field.x - pad/2;
-			sprite.y = field.y - pad/2;
+			bg.x = field.x + field.width/2 - bg.width/2;
+			bg.y = field.y + field.height/2 - bg.height/2;
 
 			if (field == ui.selectedInputField) {
 				field.style.fill = 0x404080;
 				let cursorPhase = (Math.sin(ui.selectedInputFieldTime*2*Math.PI*2-Math.PI*0.5)/2)+0.5;
 
-				ui.textCursorSprite.width = ui.size.x*0.01;
+				ui.textCursorSprite.width = ui.size.x*0.005;
 				ui.textCursorSprite.height = field.height;
 				ui.textCursorSprite.x = field.x + field.width;
 				ui.textCursorSprite.y = field.y;
@@ -583,7 +592,7 @@ function changeScreen(newScreen) {
 
 function createTextField() {
 	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
-	app.pixiApp.stage.addChild(field);
+	ui.stageSprite.addChild(field);
 	ui.pixiFields.push(field);
 	return field;
 }
@@ -592,12 +601,12 @@ function createInputTextField(hintText) {
 	if (verboseLogging) console.log("Input text field created"); //@stp What if you accidently create a sprite every frame? Then you'll see this log message
 	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
 	sprite.tint = 0xFFE0E0E0;
-	app.pixiApp.stage.addChild(sprite);
+	ui.stageSprite.addChild(sprite);
 	ui.pixiInputFieldBackgrounds.push(sprite);
 
 	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 	field.text = hintText;
-	app.pixiApp.stage.addChild(field);
+	ui.stageSprite.addChild(field);
 	ui.pixiInputFields.push(field);
 	return field;
 }
@@ -606,22 +615,24 @@ function createTextButtonSprite(text) {
 	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 	field.text = text;
 
-	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
-	sprite.width = field.width;
-	sprite.height = field.height;
+	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/buttonAsset.png"), 5, 5, 5, 5);
+	let pad = ui.size.x*0.01;
+	sprite.width = field.width + pad;
+	sprite.height = field.height + pad;
 	sprite.tint = 0xFF47C1F5;
 
+	field.x = sprite.x + sprite.width/2 - field.width/2;
+	field.y = sprite.y + sprite.height/2 - field.height/2;
 	sprite.addChild(field);
 
-	app.pixiApp.stage.addChild(sprite);
+	ui.stageSprite.addChild(sprite);
 	ui.pixiSprites.push(sprite);
 	return sprite;
 }
 
 function createSeatSprite() {
-	// let sprite = new PIXI.Sprite.from("assets/seat.png");
 	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
-	app.pixiApp.stage.addChild(sprite);
+	ui.stageSprite.addChild(sprite);
 	ui.pixiSprites.push(sprite);
 	return sprite;
 }
@@ -630,11 +641,6 @@ function spriteClicked(sprite) {
 	if (!sprite.visible) return false;
 
 	let hoveringButton = false;
-	// let x = sprite.x;
-	// let y = sprite.y;
-	// let w = sprite.width;
-	// let h = sprite.height;
-	// console.log(x+"|"+y+"|"+w+"|"+h);
 	if (ui.mouse.x > sprite.x && ui.mouse.x < sprite.x + sprite.width && ui.mouse.y > sprite.y && ui.mouse.y < sprite.y + sprite.height) {
 		hoveringButton = true;
 	}
@@ -719,7 +725,7 @@ function showPopup(text) {
 
 	ui.popupTime = 0;
 
-	app.pixiApp.stage.addChild(ui.popup);
+	ui.stageSprite.addChild(ui.popup);
 }
 
 function getShowById(id) {
