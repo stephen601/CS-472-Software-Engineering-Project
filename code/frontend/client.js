@@ -26,6 +26,7 @@ let SCREEN_REPORT = 10;
 
 let app = {};
 app.pixiApp = null;
+app.time = 0;
 
 let ui = {};
 ui.size = {};
@@ -41,6 +42,8 @@ ui.pixiInputFieldBackgrounds = [];
 ui.pixiSprites = [];
 
 ui.selectedInputField = null;
+ui.selectedInputFieldTime = 0;
+ui.textCursorSprite = null;
 
 ui.prevScreen = -1;
 ui.currentScreen = SCREEN_NONE;
@@ -140,8 +143,11 @@ function runClient() {
 
 	// Create invisible text field
 	app.inputHtmlElement = document.createElement("INPUT");
-	app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; width: 100%; height: 10%; opacity: 0%"); //@todo Make this unclickable
+	app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; top: 0px; width: 100%; height: 10%; opacity: 100%"); //@todo Make this unclickable
 	document.body.appendChild(app.inputHtmlElement);
+
+	ui.textCursorSprite = new PIXI.Sprite.from("assets/black.png");
+	app.pixiApp.stage.addChild(ui.textCursorSprite);
 
 	//@server loadShows.php?after=2525278934
 	//ShowID1, ShowName1, ShowDate1
@@ -501,6 +507,7 @@ function updateClient(delta) {
 	}
 
 	{ /// Update input field
+		ui.textCursorSprite.alpha = 0;
 		for (let i = 0; i < ui.pixiInputFields.length; i++) {
 			let sprite = ui.pixiInputFieldBackgrounds[i];
 			let field = ui.pixiInputFields[i];
@@ -513,13 +520,26 @@ function updateClient(delta) {
 			sprite.y = field.y - pad/2;
 
 			if (field == ui.selectedInputField) {
-				field.alpha = 0.75;
+				field.style.fill = 0x404080;
+				let cursorPhase = (Math.sin(ui.selectedInputFieldTime*2*Math.PI*2-Math.PI*0.5)/2)+0.5;
+
+				ui.textCursorSprite.width = ui.size.x*0.01;
+				ui.textCursorSprite.height = field.height;
+				ui.textCursorSprite.x = field.x + field.width;
+				ui.textCursorSprite.y = field.y;
+				ui.textCursorSprite.alpha = cursorPhase;
+
+				let len = app.inputHtmlElement.value.length;
+				app.inputHtmlElement.setSelectionRange(len, len);
+
+				ui.selectedInputFieldTime += elapsed;
 			} else {
-				field.alpha = 1.0;
+				field.style.fill = 0x000000;
 			}
 
-			if (spriteClicked(field)) {
+			if (spriteClicked(field) && ui.selectedInputField != field) {
 				ui.selectedInputField = field;
+				ui.selectedInputFieldTime = 0;
 
 				app.inputHtmlElement.value = ui.selectedInputField.text;
 
@@ -552,6 +572,8 @@ function updateClient(delta) {
 
 	ui.mouseJustDown = false;
 	ui.mouseJustUp = false;
+
+	app.time += elapsed;
 }
 
 function changeScreen(newScreen) {
