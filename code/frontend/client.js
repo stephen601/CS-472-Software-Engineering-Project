@@ -6,9 +6,8 @@
 //@todo Pretty up the text fields some more
 //@todo Do transitions
 //@todo Do background for plain text fields
-//@todo Remove items from cart
-//@todo Add a cart button on the show list screen
-//@todo Make a popup message system
+//@todo Prevent cart and show list screen from overflowing the layout
+//@todo Do input text field hints
 
 let verboseLogging = false;
 let defaultFontSize = 40;
@@ -44,6 +43,11 @@ app.ui.selectedInputField = null;
 
 app.ui.prevScreen = -1;
 app.ui.currentScreen = SCREEN_NONE;
+
+app.ui.popup = null;
+app.ui.popupTime = 0;
+
+app.ui.stageSprite = null;
 
 app.showManager = {};
 app.showManager.shows = [];
@@ -106,6 +110,8 @@ function updateClient(delta) {
 	let ui = app.ui;
 	let showManager = app.showManager;
 
+	let elapsed = 1/60;
+
 	ui.size.x = app.pixiApp.screen.width;
 	ui.size.y = app.pixiApp.screen.height;
 
@@ -125,31 +131,54 @@ function updateClient(delta) {
 		onFirstFrame = true;
 	}
 
+	if (ui.stageSprite != null) {
+		ui.stageSprite.width = ui.size.x;
+		ui.stageSprite.height = ui.size.y;
+	}
+
 	if (ui.currentScreen == SCREEN_NONE) {
 		if (onFirstFrame) {
-			app.pixiApp.stage.interactive = true;
-			app.pixiApp.stage.on('mousemove', function(e) {
+			ui.stageSprite = new PIXI.Sprite.from("assets/white.png");
+			app.pixiApp.stage.addChild(ui.stageSprite);
+			ui.stageSprite.tint = 0xFF262626;
+
+			ui.stageSprite.interactive = true;
+			ui.stageSprite.on("mousemove", function(e) {
 				app.ui.mouse.x = e.data.global.x;
 				app.ui.mouse.y = e.data.global.y;
 			});
-			app.pixiApp.stage.on('pointerdown', function(e) {
+			ui.stageSprite.on("pointerdown", function(e) {
 				app.ui.mouseJustDown = true;
 				app.ui.mouseDown = true;
 			});
-			app.pixiApp.stage.on('pointerup', function(e) {
+			ui.stageSprite.on("pointerup", function(e) {
+				app.ui.mouseJustUp = true;
+				app.ui.mouseDown = false;
+			});
+			ui.stageSprite.on("touchmove", function(e) {
+				app.ui.mouse.x = e.data.global.x;
+				app.ui.mouse.y = e.data.global.y;
+			});
+			ui.stageSprite.on("touchstart", function(e) {
+				app.ui.mouse.x = e.data.global.x;
+				app.ui.mouse.y = e.data.global.y;
+				app.ui.mouseJustDown = true;
+				app.ui.mouseDown = true;
+			});
+			ui.stageSprite.on("touchend", function(e) {
 				app.ui.mouseJustUp = true;
 				app.ui.mouseDown = false;
 			});
 
 			// Create invisible text field
 			app.inputHtmlElement = document.createElement("INPUT");
-			app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; width: 1%; height: 1%; opacity: 0%");
-			window.addEventListener("keydown", function(e) {
-				if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 65 && e.keyCode <= 90) || e.key == "Backspace" || e.key == "Enter") {
-					app.ui.keysPressed.push(e.key);
-				}
-			}, false);
-			//x.focus();
+			// app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; width: 1%; height: 1%; opacity: 0%");
+			app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; width: 100%; height: 10%; opacity: 0%");
+			// window.addEventListener("keydown", function(e) {
+			// 	if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 65 && e.keyCode <= 90) || e.key == "Backspace" || e.key == "Enter") {
+			// 		app.ui.keysPressed.push(e.key);
+			// 	}
+			// }, false);
 			document.body.appendChild(app.inputHtmlElement);
 
 			changeScreen(SCREEN_LOGIN);
@@ -328,12 +357,12 @@ function updateClient(delta) {
 		//@stp You could buy with nothing in your cart
 		//@stp The title of the show could change while a ticket in your cart, what happens?
 		if (onFirstFrame) {
-			ui.cartEntrySprites = [];
 
 			for (let i = 0; i < cart.length; i++) {
 				let entry = cart[i];
-				let sprite = createTextButtonSprite(entry.showId + ", " + entry.seatIndex); //@todo seatIndex should probably be a string like C6
-				ui.cartEntrySprites.push(sprite);
+				let show = getShowById(entry.showId);
+				entry.sprite = createTextButtonSprite(show.name + ", " + convertSeatIndexToString(entry.seatIndex));
+				entry.removeSprite = createTextButtonSprite("X");
 			}
 
 			ui.backButton = createTextButtonSprite("Browse more shows");
@@ -341,11 +370,23 @@ function updateClient(delta) {
 		}
 
 		let yPos = ui.size.y*0.15;
-		for (let i = 0; i < ui.cartEntrySprites.length; i++) {
-			let sprite = ui.cartEntrySprites[i];
+		for (let i = 0; i < cart.length; i++) {
+			let entry = cart[i];
+			let sprite = entry.sprite;
+			let removeSprite = entry.removeSprite;
 
 			sprite.x = ui.size.x/2 - sprite.width/2;
 			sprite.y = yPos;
+
+			removeSprite.x = sprite.x + sprite.width + ui.size.x*0.01;
+			removeSprite.y = sprite.y;
+			if (spriteClicked(removeSprite)) {
+				sprite.visible = false;
+				removeSprite.visible = false;
+				cart.splice(i, 1);
+				i--;
+				continue;
+			}
 
 			yPos += sprite.height + ui.size.y*0.02;
 		}
@@ -423,10 +464,7 @@ function updateClient(delta) {
 			ui.seatsField.text = "Seats: ";
 			for (let i = 0; i < showManager.currentSeatIndices.length; i++) {
 				let seatIndex = showManager.currentSeatIndices[i];
-				let col = seatIndex % theaterCols;
-				let row = Math.floor(seatIndex / theaterCols);
-				ui.seatsField.text += String.fromCharCode(65 + row);
-				ui.seatsField.text += col + 1;
+				ui.seatsField.text = convertSeatIndexToString(seatIndex);
 				if (i < showManager.currentSeatIndices.length-1) ui.seatsField.text += ", ";
 			}
 
@@ -489,20 +527,46 @@ function updateClient(delta) {
 				field.alpha = 1.0;
 			}
 
-			if (spriteClicked(field)) ui.selectedInputField = field;
+			if (spriteClicked(field)) {
+				ui.selectedInputField = field;
+
+				app.inputHtmlElement.value = ui.selectedInputField.text;
+
+				setTimeout(function() {
+					app.inputHtmlElement.blur();
+				}, 100);
+				setTimeout(function() {
+					app.inputHtmlElement.focus();
+				}, 200);
+			}
 
 			//@stp What if the user types a weird character
-			while (app.ui.keysPressed.length > 0) {
-				let key = app.ui.keysPressed.shift();
-				if (ui.selectedInputField) {
-					if (key == "Backspace") {
-						ui.selectedInputField.text = ui.selectedInputField.text.substring(0, ui.selectedInputField.text.length-1);
-					} else if (key == "Enter") {
-						ui.selectedInputField = null;
-					} else {
-						ui.selectedInputField.text += key;
-					}
-				}
+			ui.selectedInputField.text = app.inputHtmlElement.value;
+			// while (app.ui.keysPressed.length > 0) {
+			// 	let key = app.ui.keysPressed.shift();
+			// 	if (ui.selectedInputField) {
+			// 		if (key == "Backspace") {
+			// 			ui.selectedInputField.text = ui.selectedInputField.text.substring(0, ui.selectedInputField.text.length-1);
+			// 		} else if (key == "Enter") {
+			// 			ui.selectedInputField = null;
+			// 		} else {
+			// 			ui.selectedInputField.text += key;
+			// 		}
+			// 	}
+			// }
+		}
+	}
+
+	if (ui.popup != null) { /// Update popup
+		ui.popupTime += elapsed;
+
+		let maxTime = 5;
+		if (ui.popupTime > maxTime) {
+			let fadeTime = ui.popupTime - maxTime;
+			ui.popup.alpha = 1 - fadeTime;
+			if (ui.popup.alpha < 0) {
+				app.pixiApp.stage.removeChild(ui.popup);
+				ui.popup = null;
 			}
 		}
 	}
@@ -577,6 +641,7 @@ function spriteClicked(sprite) {
 	}
 
 	if (ui.mouseJustDown && hoveringButton) {
+		ui.mouseJustDown = false; // Prevent mouse from clicking multiple objects on the same frame
 		return true;
 	}
 	return false;
@@ -590,8 +655,7 @@ function attemptLogin(username, password) {
 		if (this.readyState == 4) {
 			if (this.status <= 99 || this.status >= 400) {
 				app.userId = 0;
-				console.log("There was problem connecting");
-				//@todo Do a popup message saying there was a problem contacting the server
+				showPopup("There was problem connecting");
 				changeScreen(SCREEN_LOGIN);
 			} else if (this.status == 200) {
 				let prefix = this.responseText.substring(0, 4);
@@ -600,10 +664,10 @@ function attemptLogin(username, password) {
 					if (colonIndex == -1) console.log("No colon?!"); //@stp
 					let numberStr = this.responseText.substring(colonIndex+2);
 					app.userId = parseInt(numberStr);
-					//@todo Make a "Welcome <user>" message
+					showPopup("Welcome user "+app.userId);
 					changeScreen(SCREEN_SHOW_LIST);
 				} else if (prefix == "Fals") {
-					console.log("Wrong creds"); //@todo Do a popup message
+					showPopup("Wrong credientials");
 					changeScreen(SCREEN_LOGIN);
 				} else {
 					console.log("Bad output: "+this.responseText);
@@ -635,4 +699,49 @@ function selectSeat(seatId) {
 
 function chargeCreditCard(cardName, cardNumber, cvv, expDate, amount) {
 	
+}
+
+function showPopup(text) {
+	let ui = app.ui;
+	console.log("Popup: "+text);
+
+	if (ui.popup != null) {
+		app.pixiApp.stage.removeChild(ui.popup);
+		ui.popup = null;
+	}
+
+	let field = new PIXI.Text(text, {fontFamily: "Arial", fontSize: defaultFontSize});
+
+	ui.popup = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
+	ui.popup.width = field.width;
+	ui.popup.height = field.height;
+	ui.popup.addChild(field);
+
+	ui.popup.x = ui.size.x/2 - ui.popup.width/2;
+	ui.popup.y = ui.size.y - ui.popup.height - ui.size.y*0.05;
+	ui.popup.tint = 0xFF404040;
+
+	ui.popupTime = 0;
+
+	app.pixiApp.stage.addChild(ui.popup);
+}
+
+function getShowById(id) {
+	for (let i = 0; i < app.showManager.shows.length; i++) {
+		let show = app.showManager.shows[i];
+		if (show.id == id) return show;
+	}
+
+	showPopup("Couldn't find show with id "+id);
+	return null;
+}
+
+function convertSeatIndexToString(seatIndex) {
+	let col = seatIndex % theaterCols;
+	let row = Math.floor(seatIndex / theaterCols);
+
+	let str = "";
+	str += String.fromCharCode(65 + row);
+	str += col + 1;
+	return str;
 }
