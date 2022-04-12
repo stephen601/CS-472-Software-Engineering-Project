@@ -1,9 +1,11 @@
+// Backend stp: Database backup / corruption possibility
+//
+//
 //@todo limit data sending string size for server
 //@todo Fix receipt screen since now we have tickets from multiple shows
 //@todo Figure out the report screen in general
 //@todo Do show editor
 //@todo Do seat editor
-//@todo Pretty up the text fields some more
 //@todo Do transitions
 //@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
@@ -162,6 +164,11 @@ function runClient() {
 	//ShowID2, ShowName2, ShowDate2
 	//...
 
+	function getShowsFromServer() {
+	}
+
+	getShowsFromServer();
+
 	changeScreen(SCREEN_LOGIN);
 }
 
@@ -301,7 +308,7 @@ function updateClient(delta) {
 				}
 			}
 
-			ui.addToCartButton = createTextButtonSprite("Add to cart(and checkout)");
+			ui.addToCartButton = createTextButtonSprite("Add to cart");
 		}
 
 		let seatWidth = 64;
@@ -650,9 +657,7 @@ function spriteClicked(sprite) {
 	return false;
 }
 
-function attemptLogin(username, password) {
-	//@stp Test login case sensitivity
-	//False<br> Username does not exist.
+function makeRequest(url, onSuccess) {
 	let xmlhttp = new XMLHttpRequest();
 	xmlhttp.onreadystatechange = function() {
 		if (this.readyState == 4) {
@@ -661,27 +666,38 @@ function attemptLogin(username, password) {
 				showPopup("There was problem connecting");
 				changeScreen(SCREEN_LOGIN);
 			} else if (this.status == 200) {
-				let prefix = this.responseText.substring(0, 4);
-				if (prefix == "True") {
-					let colonIndex = this.responseText.indexOf(":");
-					if (colonIndex == -1) console.log("No colon?!"); //@stp
-					let numberStr = this.responseText.substring(colonIndex+2);
-					app.userId = parseInt(numberStr);
-					showPopup("Welcome user "+app.userId);
-					changeScreen(SCREEN_SHOW_LIST);
-				} else if (prefix == "Fals") {
-					showPopup("Wrong credientials");
-					changeScreen(SCREEN_LOGIN);
-				} else {
-					console.log("Bad output: "+this.responseText);
-				}
+				onSuccess(this.responseText);
 			}
 		}
 	}
 	//xmlhttp.open("GET", "login.html", true);
 	//@stp xmlhttp.onerror and this.status
-	xmlhttp.open("GET", "includes/login.inc.php?username="+username+"&password="+password, true);
+	xmlhttp.open("GET", url, true);
 	xmlhttp.send();
+}
+
+function attemptLogin(username, password) {
+	//@stp Test login case sensitivity
+	//False<br> Username does not exist.
+
+	function onComplete(responseText) {
+		let prefix = responseText.substring(0, 4);
+		if (prefix == "True") {
+			let colonIndex = responseText.indexOf(":");
+			if (colonIndex == -1) console.log("No colon?!"); //@stp
+			let numberStr = responseText.substring(colonIndex+2);
+			app.userId = parseInt(numberStr);
+			showPopup("Welcome user "+app.userId);
+			changeScreen(SCREEN_SHOW_LIST);
+		} else if (prefix == "Fals") {
+			showPopup("Wrong credientials");
+			changeScreen(SCREEN_LOGIN);
+		} else {
+			console.log("Bad output: "+responseText);
+		}
+	}
+
+	makeRequest("includes/login.inc.php?username="+username+"&password="+password, onComplete);
 }
 
 function selectShow(showIndex) {
