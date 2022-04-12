@@ -1,0 +1,1 @@
+Error updating record: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'HERE ShowID =  & SeatID =' at line 1 

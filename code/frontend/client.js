@@ -192,6 +192,21 @@ function updateClient(delta) {
 		ui.bgSprite.height = ui.size.y;
 	}
 
+	function placeAtTop(sprite) {
+		sprite.x = ui.size.x/2 - sprite.width/2;
+		sprite.y = ui.size.y*0.3 - sprite.height/2;
+	}
+
+	function placeUnder(below, above) {
+		below.x = ui.size.x / 2 - below.width / 2;
+		below.y = above.y + above.height + 10;
+	}
+
+	function placeAtCenter(sprite) {
+		sprite.x = ui.size.x / 2 - sprite.width / 2;
+		sprite.y = ui.size.y / 2 - sprite.height / 2;
+	}
+
 	if (ui.currentScreen == SCREEN_NONE) {
 	} else if (ui.currentScreen == SCREEN_LOGIN) {
 		//@stp Failed to login in general
@@ -202,17 +217,10 @@ function updateClient(delta) {
 			ui.loginButton = createTextButtonSprite("Login");
 			ui.instantLogin = createTextButtonSprite("Instant login");
 		}
-		ui.userField.x = ui.size.x/2 - ui.userField.width/2;
-		ui.userField.y = ui.size.y*0.3 - ui.userField.height/2;
-
-		ui.passField.x = ui.size.x / 2 - ui.passField.width / 2;
-		ui.passField.y = ui.userField.y + ui.userField.height + 10;
-
-		ui.loginButton.x = ui.size.x / 2 - ui.loginButton.width / 2;
-		ui.loginButton.y = ui.passField.y + ui.passField.height + 10;
-
-		ui.instantLogin.x = ui.size.x / 2 - ui.instantLogin.width / 2;
-		ui.instantLogin.y = ui.loginButton.y + ui.loginButton.height + 10;
+		placeAtTop(ui.userField);
+		placeUnder(ui.passField, ui.userField);
+		placeUnder(ui.loginButton, ui.passField);
+		placeUnder(ui.instantLogin, ui.loginButton);
 
 		if (spriteClicked(ui.loginButton)) {
 			attemptLogin(ui.userField.text, ui.passField.text);
@@ -230,8 +238,7 @@ function updateClient(delta) {
 			ui.waitingText.text = "Waiting...";
 		}
 
-		ui.waitingText.x = ui.size.x / 2 - ui.waitingText.width / 2;
-		ui.waitingText.y = ui.size.y / 2 - ui.waitingText.height / 2;
+		placeCenter(ui.waitingText);
 	} else if (ui.currentScreen == SCREEN_SHOW_LIST) {
 		//@stp What if there's too many shows to fit on the screen
 		if (onFirstFrame) {
@@ -368,6 +375,7 @@ function updateClient(delta) {
 				let show = getShowById(entry.showId);
 				entry.sprite = createTextButtonSprite(show.name + ", " + convertSeatIndexToString(entry.seatIndex));
 				entry.removeSprite = createTextButtonSprite("X");
+				entry.removeSprite.tint = 0xA00000;
 			}
 
 			ui.backButton = createTextButtonSprite("Browse more shows");
@@ -426,21 +434,11 @@ function updateClient(delta) {
 			ui.buyButton = createTextButtonSprite("Buy");
 		}
 
-		let downPad = ui.size.y*0.02;
-		ui.nameField.x = ui.size.x / 2 - ui.nameField.width / 2;
-		ui.nameField.y = ui.size.y*0.15;
-
-		ui.creditNumber.x = ui.size.x / 2 - ui.creditNumber.width / 2;
-		ui.creditNumber.y = ui.nameField.y + ui.nameField.height + downPad;
-
-		ui.cvvField.x = ui.size.x / 2 - ui.cvvField.width / 2;
-		ui.cvvField.y = ui.creditNumber.y + ui.creditNumber.height + downPad;
-
-		ui.dateField.x = ui.size.x / 2 - ui.dateField.width / 2;
-		ui.dateField.y = ui.cvvField.y + ui.cvvField.height + downPad;
-
-		ui.zipField.x = ui.size.x / 2 - ui.zipField.width / 2;
-		ui.zipField.y = ui.dateField.y + ui.dateField.height + downPad;
+		placeAtTop(ui.nameField);
+		placeUnder(ui.creditNumber, ui.nameField);
+		placeUnder(ui.cvvField, ui.creditNumber);
+		placeUnder(ui.dateField, ui.cvvField);
+		placeUnder(ui.zipField, ui.dateField);
 
 		ui.buyButton.x = ui.size.x * 0.5 - ui.buyButton.width / 2;
 		ui.buyButton.y = ui.size.y*0.85 - ui.buyButton.height;
