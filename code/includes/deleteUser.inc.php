@@ -1,2 +1,6 @@
-Error: DELETE FROM `User_Profile` WHERE `User_Profile`.`ID`=;
-      You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '' at line 1
+<?php
+include 'userProfile.inc.php';
+$username = $_GET['username'];
+$userPro = new UserProfile;
+$userPro->Username=$username;
+echo $userPro->deleteUsername(); 
