@@ -50,3 +50,11 @@ $showname=$_GET['showname'];
 $showdate=$_GET['showdate'];
 
 $showtime=$_GET['showtime'];
+
+getShowReport.inc.php=This file is used to get the details for one show on multiple days. It will require three variables through _GET. A show name, a show date minimum, and a show date maximum. If no data is found it will return "No Data Found."
+
+$showname = $_GET['showname'];
+
+$showdatemin = $_GET['showdatemin'];
+
+$showdatemax = $_GET['showdatemax'];
