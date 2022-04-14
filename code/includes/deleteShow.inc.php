@@ -1,2 +1,10 @@
-Error: DELETE FROM `Event` WHERE `Event`.`ShowID`=;
-        You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '' at line 1
+<?php
+include 'shows.inc.php';
+$showname=$_GET['showname'];
+$showdate=$_GET['showdate'];
+$showtime=$_GET['showtime'];
+$show = new Shows;
+$show->ShowName=$showname;
+$show->ShowDate=$showdate;
+$show->ShowTime=$showtime;
+echo $show->deleteShow(); 
