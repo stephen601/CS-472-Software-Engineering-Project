@@ -1,5 +1,15 @@
 // Backend stp: Database backup / corruption possibility
+//@stp Do a build version?
+//	- A build version is generated upon every build of our program, this is managed by our build system, when the build system is invoked the current date and time is taken and placed in a file called buildDate.txt in the same directory as client.js, when starting, client.js takes this build date and displays it at the top left corner of debug builds. This number is used during testing to tell if we're seeing a old cached version of the application. Or potentially to more easily diagnose crashes or logs generated and track them to a particular range of commits.
+//@stp Do real log levels?
+//	- In the client application we log data for various reasons, some are informational messages containing information that may be relevant in the future, like the build date/version, some may be for performance warning and noncritical issues, and some are for debugging crashes. To facility these purposes we have a logger module. This module consists of X functions, logVerbose(), logPrint(), logWarning(), logError(), logPanic(). (Explain examples of each)
+//@stp Do database logging?
+//@stp Do server unit tests? (createUser, login, deleteUser), (createShow, getShows, deleteShow), etc...?
+//	- The client has an internal unit testing system to test its connection to the server
+//@stp Require a beta client for live testing?
 //
+//@stp All error conditions in the client are explicitly checked as an error code, no exceptions. (Many functions can be assume to always work, especially ui functions.)
+//@stp Any server communication error kicks user back to login screen with a connection error popup
 //
 //@todo limit data sending string size for server
 //@todo Fix receipt screen since now we have tickets from multiple shows
