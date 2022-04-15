@@ -76,24 +76,22 @@
            echo "<br>Show ID: ". $this->ShowID;
         }
        }
-     public function getShows(){
-       $conn=require'connection.inc.php';
-       $sql = "SELECT * FROM `Event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` >= '$this->ShowDateMin' AND `ShowDate` <= '$this->ShowDateMax'";
-       $result = mysqli_query($conn, $sql);
-       $error_msg= ' Username does not exist.';
-       $resultCheck=mysqli_num_rows($result);
-       if ($resultCheck > 0) {
-          // output data of each row
-          while($row = $result->fetch_assoc()){
-             echo "Show ID: ".$row['ShowID']. " - Show Name:". $row['ShowName']. " - Date:". $row['ShowDate']. " - Time:". $row['ShowTime']. " - Price:". $row['ShowPrice'];
-             echo "<br />";
-          }
-       }
-       Else{
-           echo "No data found.";
-       }
-     }
+		public function getShows() {
+			$conn=require'connection.inc.php';
+			$sql = "SELECT * FROM `Event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` >= '$this->ShowDateMin' AND `ShowDate` <= '$this->ShowDateMax'";
+			$result = mysqli_query($conn, $sql);
+			$error_msg= ' Username does not exist.';
+			$resultCheck=mysqli_num_rows($result);
+			if ($resultCheck > 0) {
+				// output data of each row
+				while($row = $result->fetch_assoc()){
+					// echo "Show ID: ".$row['ShowID']. " - Show Name:". $row['ShowName']. " - Date:". $row['ShowDate']. " - Time:". $row['ShowTime']. " - Price:". $row['ShowPrice'];
+					echo $row['ShowID']. "|". $row['ShowName']. "|". $row['ShowDate']. "|". $row['ShowTime']. "|". $row['ShowPrice'];
+					echo "<br />";
+				}
+			}
+			Else{
+			echo "No data found.";
+			}
+		}
  }
-       
-     
-        

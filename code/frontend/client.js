@@ -175,6 +175,42 @@ function runClient() {
 	//...
 
 	function getShowsFromServer() {
+
+		function parseShowData(data) {
+			showManager.shows = [];
+
+			let showLines = data.split("<br />");
+			for (let i = 0; i < showLines.length; i++) {
+				let line = showLines[i];
+				if (line.length < 2) continue;
+				let entries = line.split("|");
+
+				let show = {};
+				show.id = parseInt(entries[0]);
+				show.name = entries[1];
+				// show.date = entries[2];
+				{
+					let dateComponents = entries[2].split("-");
+					show.date = new Date();
+					show.date.setFullYear(parseInt(dateComponents[0]));
+					show.date.setMonth(parseInt(dateComponents[1]));
+					show.date.setDate(parseInt(dateComponents[2]));
+
+					let timeComponents = entries[3].split(":");
+					show.date.setHours(parseInt(timeComponents[0]), parseInt(timeComponents[1]), parseInt(timeComponents[2]));
+				}
+				showManager.shows.push(show);
+			}
+			/*
+			27|test|2022-04-15|22:32:26|5<br />28|test|2022-04-16|21:32:26|5<br />29|test|2022-04-17|15:32:26|5<br />
+			*/
+		}
+
+		let date = new Date();
+		let minDateStr = date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
+		let maxDateStr = (date.getFullYear()+5) + "-" + date.getMonth() + "-" + date.getDate();
+		let url = "includes/getShowReport.inc.php?showname=test&showdatemin="+minDateStr+"&showdatemax="+maxDateStr;
+		makeRequest(url, parseShowData);
 	}
 
 	getShowsFromServer();
@@ -255,7 +291,7 @@ function updateClient(delta) {
 			ui.waitingText.text = "Waiting...";
 		}
 
-		placeCenter(ui.waitingText);
+		placeAtCenter(ui.waitingText);
 	} else if (ui.currentScreen == SCREEN_SHOW_LIST) {
 		//@stp What if there's too many shows to fit on the screen
 		if (onFirstFrame) {
@@ -263,7 +299,14 @@ function updateClient(delta) {
 
 			for (let i = 0; i < showManager.shows.length; i++) {
 				let show = showManager.shows[i];
-				let sprite = createTextButtonSprite(show.name);
+				let buttonLabel = show.name + " at:";
+				buttonLabel += show.date.getMonth() + "-";
+				buttonLabel += show.date.getDate() + "-";
+				buttonLabel += show.date.getFullYear() + " ";
+				buttonLabel += show.date.getHours() + ":";
+				buttonLabel += show.date.getMinutes() + ":";
+				buttonLabel += show.date.getSeconds();
+				let sprite = createTextButtonSprite(buttonLabel);
 				ui.showButtons.push(sprite);
 			}
 			ui.addButton = createTextButtonSprite("Add show");
