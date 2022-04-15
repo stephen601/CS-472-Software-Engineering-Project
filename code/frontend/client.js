@@ -819,25 +819,33 @@ function convertSeatIndexToString(seatIndex) {
 function generateUml() {
 	let docObjects = {};
 	docObjects["app"] = app;
-	docObjects["ui"] = showManager;
+	docObjects["ui"] = ui;
 	docObjects["showManager"] = showManager;
+
+	let graphVizStr = "";
+	graphVizStr += "digraph G {\n";
+	graphVizStr += "rankdir=\"RL\"\n");
 
 	for (let objKey in docObjects) {
 		let obj = docObjects[objKey];
+
 		for (let key in obj) {
 			let value = obj[key];
-			let str = objKey+".";
+			let str = objKey+"->\"";
+
 			if (typeof value === "function") {
 				str += "key("+getParamNames(value)+")";
 			} else if (Array.isArray(obj)) {
 				str += key+"[]";
 			} else {
-				str += key;
+				str += key + ":" + typeof value;
 			}
-			console.log(str);
+			str += "\"\n";
+			graphVizStr += str;
 		}
-
 	}
+	graphVizStr += "}";
+	console.log(graphVizStr);
 }
 
 // https://stackoverflow.com/questions/1007981/how-to-get-function-parameter-names-values-dynamically
