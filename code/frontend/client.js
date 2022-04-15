@@ -120,7 +120,7 @@ function runClient() {
 
 	document.body.appendChild(pixiApp.view);
 
-	pixiApp.ticker.add(updateClient);
+	pixiApp.ticker.add(app.updateClient);
 	app.pixiApp = pixiApp;
 
 	ui.stageSprite = new PIXI.Sprite();
@@ -214,11 +214,12 @@ function runClient() {
 	}
 
 	getShowsFromServer();
+	generateUml();
 
 	changeScreen(SCREEN_LOGIN);
 }
 
-function updateClient(delta) {
+app.updateClient = function(delta) {
 	let elapsed = 1/60;
 
 	ui.size.x = app.pixiApp.screen.width;
@@ -813,4 +814,38 @@ function convertSeatIndexToString(seatIndex) {
 	str += String.fromCharCode(65 + row);
 	str += col + 1;
 	return str;
+}
+
+function generateUml() {
+	let docObjects = {};
+	docObjects["app"] = app;
+	docObjects["ui"] = showManager;
+	docObjects["showManager"] = showManager;
+
+	for (let objKey in docObjects) {
+		let obj = docObjects[objKey];
+		for (let key in obj) {
+			let value = obj[key];
+			let str = objKey+".";
+			if (typeof value === "function") {
+				str += "key("+getParamNames(value)+")";
+			} else if (Array.isArray(obj)) {
+				str += key+"[]";
+			} else {
+				str += key;
+			}
+			console.log(str);
+		}
+
+	}
+}
+
+// https://stackoverflow.com/questions/1007981/how-to-get-function-parameter-names-values-dynamically
+var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
+var ARGUMENT_NAMES = /([^\s,]+)/g;
+function getParamNames(func) {
+  var fnStr = func.toString().replace(STRIP_COMMENTS, '');
+  var result = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')')).match(ARGUMENT_NAMES);
+  if(result === null) result = [];
+  return result;
 }
