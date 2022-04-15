@@ -163,7 +163,7 @@ function runClient() {
 
 	// Create invisible text field
 	app.inputHtmlElement = document.createElement("INPUT");
-	app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; top: 0px; width: 100%; height: 10%; opacity: 100%"); //@todo Make this unclickable
+	app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; top: 0px; width: 100%; height: 10%; opacity: 0%"); //@todo Make this unclickable
 	document.body.appendChild(app.inputHtmlElement);
 
 	ui.textCursorSprite = new PIXI.Sprite.from("assets/black.png");
@@ -824,7 +824,7 @@ function generateUml() {
 
 	let graphVizStr = "";
 	graphVizStr += "digraph G {\n";
-	graphVizStr += "rankdir=\"RL\"\n");
+	graphVizStr += "rankdir=\"RL\"\n";
 
 	for (let objKey in docObjects) {
 		let obj = docObjects[objKey];
