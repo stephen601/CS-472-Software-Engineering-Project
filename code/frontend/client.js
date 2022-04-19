@@ -270,11 +270,13 @@ app.updateClient = function(delta) {
 			ui.passField = createInputTextField("password");
 			ui.loginButton = createTextButtonSprite("Login");
 			ui.instantLogin = createTextButtonSprite("Instant login");
+			ui.debugButton = createTextButtonSprite("Debug code");
 		}
 		placeAtTop(ui.userField);
 		placeUnder(ui.passField, ui.userField);
 		placeUnder(ui.loginButton, ui.passField);
 		placeUnder(ui.instantLogin, ui.loginButton);
+		placeUnder(ui.debugButton, ui.instantLogin);
 
 		if (spriteClicked(ui.loginButton)) {
 			attemptLogin(ui.userField.text, ui.passField.text);
@@ -285,6 +287,18 @@ app.updateClient = function(delta) {
 			attemptLogin("Jeru", "testPass");
 			changeScreen(SCREEN_WAITING_FOR_SERVER);
 		}
+
+		if (spriteClicked(ui.debugButton)) {
+			// let url = "includes/newShowInsert.inc.php?showname=testShow&showdate=2022-4-21&showtime=15:25:00&showprice=0";
+			// let url = "includes/newDeleteShow.php?ShowID=31";
+			let url = "includes/buySeats.php?UserID=22&str=32-1-32-2-32-3-33-4-33-5-33-6";
+			makeRequest(url, function(responseText) {
+				console.log("Url: "+url);
+				console.log(responseText);
+			});
+		}
+
+
 	} else if (ui.currentScreen == SCREEN_WAITING_FOR_SERVER) {
 		//@stp Time out on this screen
 		if (onFirstFrame) {
