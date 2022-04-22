@@ -1,15 +1,9 @@
-// Backend stp: Database backup / corruption possibility
-//@stp Do a build version?
-//	- A build version is generated upon every build of our program, this is managed by our build system, when the build system is invoked the current date and time is taken and placed in a file called buildDate.txt in the same directory as client.js, when starting, client.js takes this build date and displays it at the top left corner of debug builds. This number is used during testing to tell if we're seeing a old cached version of the application. Or potentially to more easily diagnose crashes or logs generated and track them to a particular range of commits.
-//@stp Do real log levels?
-//	- In the client application we log data for various reasons, some are informational messages containing information that may be relevant in the future, like the build date/version, some may be for performance warning and noncritical issues, and some are for debugging crashes. To facility these purposes we have a logger module. This module consists of X functions, logVerbose(), logPrint(), logWarning(), logError(), logPanic(). (Explain examples of each)
-//@stp Do database logging?
-//@stp Do server unit tests? (createUser, login, deleteUser), (createShow, getShows, deleteShow), etc...?
-//	- The client has an internal unit testing system to test its connection to the server
-//@stp Require a beta client for live testing?
-//
-//@stp All error conditions in the client are explicitly checked as an error code, no exceptions. (Many functions can be assume to always work, especially ui functions.)
-//@stp Any server communication error kicks user back to login screen with a connection error popup
+// User creation (client)
+// Credit card verify (server)
+// Admin mode (client/server)
+// Show editor (client/server)
+// Seat price editor (client/server)
+// Reports (client/server)
 //
 //@todo limit data sending string size for server
 //@todo Fix receipt screen since now we have tickets from multiple shows
@@ -76,41 +70,6 @@ let cart = [];
 
 let THEATER_ROWS = 8;
 let THEATER_COLS = 12;
-
-{
-	let show = {};
-	show.id = 1;
-	show.name = "Beetlejuice";
-	show.date = new Date("March 30, 2022 07:24:00");
-	show.seats = [];
-	for (let i = 0; i < 12*8; i++) {
-		let seat = {};
-		//seat.id = 
-	}
-
-	showManager.shows.push(show);
-}
-
-{
-	let show = {};
-	show.id = 2;
-	show.name = "Harry Potter and the Cursed Child";
-	show.date = new Date("April 2, 2022 09:24:00");
-	show.seats = [];
-
-	showManager.shows.push(show);
-}
-
-{
-	let show = {};
-	show.id = 3;
-	show.name = "Mrs. Doubtfire";
-	show.date = new Date("April 5, 2022 03:24:00");
-	show.seats = [];
-
-	showManager.shows.push(show);
-}
-
 
 function runClient() {
 	let pixiApp = new PIXI.Application({
@@ -209,7 +168,7 @@ function runClient() {
 		let date = new Date();
 		let minDateStr = date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
 		let maxDateStr = (date.getFullYear()+5) + "-" + date.getMonth() + "-" + date.getDate();
-		let url = "includes/getShowReport.inc.php?showname=test&showdatemin="+minDateStr+"&showdatemax="+maxDateStr;
+		let url = "includes/getShowReport.inc.php?showdatemin="+minDateStr+"&showdatemax="+maxDateStr;
 		makeRequest(url, parseShowData);
 	}
 
@@ -291,7 +250,8 @@ app.updateClient = function(delta) {
 		if (spriteClicked(ui.debugButton)) {
 			// let url = "includes/newShowInsert.inc.php?showname=testShow&showdate=2022-4-21&showtime=15:25:00&showprice=0";
 			// let url = "includes/newDeleteShow.php?ShowID=31";
-			let url = "includes/buySeats.php?UserID=22&str=32-1-32-2-32-3-33-4-33-5-33-6";
+			// let url = "includes/buySeats.php?UserID=22&str=32-1-32-2-32-3-33-4-33-5-33-6";
+			let url = "includes/editShow.php?ShowID=32&ShowName=newName&ShowDate=2022-4-25&ShowTime=16:25:00";
 			makeRequest(url, function(responseText) {
 				console.log("Url: "+url);
 				console.log(responseText);
@@ -308,7 +268,7 @@ app.updateClient = function(delta) {
 
 		placeAtCenter(ui.waitingText);
 	} else if (ui.currentScreen == SCREEN_SHOW_LIST) {
-		//@stp What if there's too many shows to fit on the screen
+		//@todo Update the shows locally
 		if (onFirstFrame) {
 			ui.showButtons = [];
 
@@ -363,8 +323,6 @@ app.updateClient = function(delta) {
 			}
 		}
 	} else if (ui.currentScreen == SCREEN_SEAT_LIST) {
-		//@stp You could click the "add to card" button with no seats selected, but it's invisible to avoid this class of errors.
-		//@stp Is it possible to select too many seats?
 		if (onFirstFrame) {
 			showManager.currentSeatIndices = [];
 			ui.seatButtons = [];
@@ -377,6 +335,7 @@ app.updateClient = function(delta) {
 			}
 
 			ui.addToCartButton = createTextButtonSprite("Add to cart");
+			ui.editShowButton = createTextButtonSprite("Edit show");
 		}
 
 		let seatWidth = 64;
@@ -437,6 +396,14 @@ app.updateClient = function(delta) {
 				cart.push(cartEntry);
 			}
 			changeScreen(SCREEN_CART);
+		}
+
+		ui.editShowButton.x = ui.size.x*0.05;
+		ui.editShowButton.y = ui.size.y - ui.editShowButton.height - ui.size.y*0.05;
+
+		// ui.editShowButton.visible = app.isAdmin;
+		if (spriteClicked(ui.editShowButton)) {
+			changeScreen(SCREEN_SHOW_EDITOR);
 		}
 
 	} else if (ui.currentScreen == SCREEN_CART) {
@@ -566,9 +533,34 @@ app.updateClient = function(delta) {
 			changeScreen(SCREEN_SHOW_LIST);
 		}
 	} else if (ui.currentScreen == SCREEN_SHOW_EDITOR) {
-		//@stp @todo
 		if (onFirstFrame) {
+			let show = showManager.shows[showManager.currentShowIndex];
 
+			ui.showNameField = createInputTextField("Show name");
+			ui.showNameField.text = show.name;
+
+			ui.showDateField = createInputTextField("Show date");
+			ui.showDateField.text = show.date.getFullYear() + "-" + show.date.getMonth() + "-" + show.date.getDate();
+
+			ui.showTimeField = createInputTextField("Show time");
+			ui.showTimeField.text = show.date.getHours() + ":" + show.date.getMinutes() + ":" + show.date.getSeconds(); //@todo Don't specify seconds
+
+			ui.saveButton = createTextButtonSprite("Save");
+		}
+
+		placeAtTop(ui.showNameField);
+		placeUnder(ui.showDateField, ui.showNameField);
+		placeUnder(ui.showTimeField, ui.showDateField);
+
+		ui.saveButton.x = ui.size.x/2 - ui.saveButton.width/2;
+		ui.saveButton.y = ui.size.y - ui.saveButton.height - ui.size.y*0.05;
+		if (spriteClicked(ui.saveButton)) {
+			let show = showManager.shows[showManager.currentShowIndex];
+			let url = "includes/editShow.php?ShowID="+show.id+"&ShowName="+ui.showNameField.text+"&ShowDate="+ui.showDateField+"&ShowTime="+ui.showTimeField;
+			makeRequest(url, function(responseText) {
+				showPopup("The show was successfully updated!");
+				changeScreen(SCREEN_SHOW_LIST);
+			});
 		}
 		//@todo Delete show
 		//@server editShow.php?showId=3&showName=MyShowName&showDate=3248092347

@@ -66,19 +66,6 @@ class Shows{
 			echo "Error: " . $sql . " " . mysqli_error($conn);
 		}
 	}
-	public function checkShowOld(){
-		$conn=require'connection.inc.php';
-		$sql = "SELECT * FROM `Event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` = '$this->ShowDate' AND `ShowTime` = '$this->ShowTime'";
-		$result=mysqli_query($conn, $sql);
-		$row=mysqli_fetch_assoc($result);
-		if($result){
-			if($row["ShowName"]==$this->ShowName){
-				return $test=FALSE;
-			}else{
-				return $test=TRUE;
-			}
-		}
-	} 
 	public function checkShow(){
 		$conn=require'connection.inc.php';
 		$sql = "SELECT * FROM `Event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` = '$this->ShowDate' AND `ShowTime` = '$this->ShowTime'";
@@ -123,9 +110,8 @@ class Shows{
 	}
 	public function getShows() {
 		$conn=require'connection.inc.php';
-		$sql = "SELECT * FROM `Event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` >= '$this->ShowDateMin' AND `ShowDate` <= '$this->ShowDateMax'";
+		$sql = "SELECT * FROM `Event` WHERE `ShowDate` >= '$this->ShowDateMin' AND `ShowDate` <= '$this->ShowDateMax'";
 		$result = mysqli_query($conn, $sql);
-		$error_msg= ' Username does not exist.';
 		$resultCheck=mysqli_num_rows($result);
 		if ($resultCheck > 0) {
 			// output data of each row
