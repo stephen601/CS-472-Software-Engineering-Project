@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: Apr 21, 2022 at 11:35 PM
+-- Generation Time: Apr 23, 2022 at 08:52 PM
 -- Server version: 10.6.5-MariaDB
 -- PHP Version: 7.4.26
 
@@ -79,10 +79,7 @@ CREATE TABLE IF NOT EXISTS `event` (
 --
 
 INSERT INTO `event` (`ShowID`, `ShowName`, `ShowDate`, `ShowTime`, `ShowPrice`) VALUES
-(27, 'test', '2022-04-15', '22:32:26', 5),
-(28, 'test', '2022-04-16', '21:32:26', 5),
-(29, 'test', '2022-04-17', '15:32:26', 5),
-(32, 'testShow', '2022-04-20', '15:25:00', 0),
+(32, 'newName', '2022-04-25', '16:25:00', 0),
 (33, 'testShow', '2022-04-21', '15:25:00', 0);
 
 -- --------------------------------------------------------
@@ -187,9 +184,9 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (32, 25, 5, 0),
 (32, 26, 5, 0),
 (32, 27, 5, 0),
-(32, 28, 5, 0),
+(32, 28, 5, 26),
 (32, 29, 5, 0),
-(32, 30, 5, 0),
+(32, 30, 5, 26),
 (32, 31, 5, 0),
 (32, 32, 5, 0),
 (32, 33, 5, 0),
@@ -199,7 +196,7 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (32, 37, 5, 0),
 (32, 38, 5, 0),
 (32, 39, 5, 0),
-(32, 40, 5, 0),
+(32, 40, 5, 26),
 (32, 41, 5, 0),
 (32, 42, 5, 0),
 (32, 43, 5, 0),
@@ -297,7 +294,7 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (33, 39, 5, 0),
 (33, 40, 5, 0),
 (33, 41, 5, 0),
-(33, 42, 5, 0),
+(33, 42, 5, 26),
 (33, 43, 5, 0),
 (33, 44, 5, 0),
 (33, 45, 5, 0),
@@ -309,7 +306,7 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (33, 51, 5, 0),
 (33, 52, 5, 0),
 (33, 53, 5, 0),
-(33, 54, 5, 0),
+(33, 54, 5, 26),
 (33, 55, 5, 0),
 (33, 56, 5, 0),
 (33, 57, 5, 0),
@@ -321,7 +318,7 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (33, 63, 5, 0),
 (33, 64, 5, 0),
 (33, 65, 5, 0),
-(33, 66, 5, 0),
+(33, 66, 5, 26),
 (33, 67, 5, 0),
 (33, 68, 5, 0),
 (33, 69, 5, 0),
@@ -363,17 +360,21 @@ CREATE TABLE IF NOT EXISTS `user_profile` (
   `ID` int(11) NOT NULL AUTO_INCREMENT,
   `Username` char(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `Password` char(32) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `UserStatus` char(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `IsAdmin` tinyint(4) NOT NULL,
+  `Dob` date NOT NULL,
+  `Phone` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `Address` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `Email` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `user_profile`
 --
 
-INSERT INTO `user_profile` (`ID`, `Username`, `Password`, `UserStatus`) VALUES
-(22, 'Jeru', 'testPass', 'Admin'),
-(24, 'newguy', 'newpassword', 'Admin');
+INSERT INTO `user_profile` (`ID`, `Username`, `Password`, `IsAdmin`, `Dob`, `Phone`, `Address`, `Email`) VALUES
+(26, 'Jeru', 'testPass', 0, '1994-03-29', '15552350', '123 Place', 'myName@site.com'),
+(27, 'UserName2', 'Password', 0, '1991-03-24', '21312412', 'Address', 'Email');
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
