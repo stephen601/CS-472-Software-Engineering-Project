@@ -1,14 +1,13 @@
-// User creation (client)
-// Credit card verify (server)
 // Admin mode (client/server)
-// Show editor (client/server)
 // Seat price editor (client/server)
 // Reports (client/server)
+//@todo Prevent two people from buying the same seat
+//@todo Add back buttons
+//@todo Fix recipt screen
 //
 //@todo limit data sending string size for server
 //@todo Fix receipt screen since now we have tickets from multiple shows
 //@todo Figure out the report screen in general
-//@todo Do show editor
 //@todo Do seat editor
 //@todo Do transitions
 //@todo Do background for plain text fields
@@ -18,17 +17,18 @@
 let verboseLogging = false;
 let defaultFontSize = 40;
 
-let SCREEN_NONE = 0;
-let SCREEN_LOGIN = 1;
-let SCREEN_WAITING_FOR_SERVER = 2;
-let SCREEN_SHOW_LIST = 3;
-let SCREEN_SEAT_LIST = 4;
-let SCREEN_PAYMENT_INFO = 5;
-let SCREEN_CART = 6;
-let SCREEN_RECEIPT = 7;
-let SCREEN_SHOW_EDITOR = 8;
-let SCREEN_SEAT_EDITOR = 9;
-let SCREEN_REPORT = 10;
+let SCREEN_NONE               = 0;
+let SCREEN_LOGIN              = 1;
+let SCREEN_CREATE_ACCOUNT     = 2;
+let SCREEN_WAITING_FOR_SERVER = 3;
+let SCREEN_SHOW_LIST          = 4;
+let SCREEN_SEAT_LIST          = 5;
+let SCREEN_PAYMENT_INFO       = 6;
+let SCREEN_CART               = 7;
+let SCREEN_RECEIPT            = 8;
+let SCREEN_SHOW_EDITOR        = 9;
+let SCREEN_SEAT_EDITOR        = 10;
+let SCREEN_REPORT             = 11;
 
 let app = {};
 app.pixiApp = null;
@@ -210,6 +210,11 @@ app.updateClient = function(delta) {
 		sprite.y = ui.size.y*0.3 - sprite.height/2;
 	}
 
+	function placeAtBottom(sprite) {
+		sprite.x = ui.size.x/2 - sprite.width/2;
+		sprite.y = ui.size.y - sprite.height/2 - ui.size.y*0.3;
+	}
+
 	function placeUnder(below, above) {
 		below.x = ui.size.x / 2 - below.width / 2;
 		below.y = above.y + above.height + 10;
@@ -218,6 +223,11 @@ app.updateClient = function(delta) {
 	function placeAtCenter(sprite) {
 		sprite.x = ui.size.x / 2 - sprite.width / 2;
 		sprite.y = ui.size.y / 2 - sprite.height / 2;
+	}
+
+	function placeAtBottomLeft(sprite) {
+		sprite.x = ui.size.x*0.05;
+		sprite.y = ui.size.y - sprite.height - ui.size.y*0.05;
 	}
 
 	if (ui.currentScreen == SCREEN_NONE) {
@@ -230,12 +240,15 @@ app.updateClient = function(delta) {
 			ui.loginButton = createTextButtonSprite("Login");
 			ui.instantLogin = createTextButtonSprite("Instant login");
 			ui.debugButton = createTextButtonSprite("Debug code");
+			ui.createAccountButton = createTextButtonSprite("Create Account");
 		}
 		placeAtTop(ui.userField);
 		placeUnder(ui.passField, ui.userField);
 		placeUnder(ui.loginButton, ui.passField);
 		placeUnder(ui.instantLogin, ui.loginButton);
 		placeUnder(ui.debugButton, ui.instantLogin);
+
+		placeAtBottomLeft(ui.createAccountButton);
 
 		if (spriteClicked(ui.loginButton)) {
 			attemptLogin(ui.userField.text, ui.passField.text);
@@ -251,13 +264,50 @@ app.updateClient = function(delta) {
 			// let url = "includes/newShowInsert.inc.php?showname=testShow&showdate=2022-4-21&showtime=15:25:00&showprice=0";
 			// let url = "includes/newDeleteShow.php?ShowID=31";
 			// let url = "includes/buySeats.php?UserID=22&str=32-1-32-2-32-3-33-4-33-5-33-6";
-			let url = "includes/editShow.php?ShowID=32&ShowName=newName&ShowDate=2022-4-25&ShowTime=16:25:00";
+			// let url = "includes/editShow.php?ShowID=32&ShowName=newName&ShowDate=2022-4-25&ShowTime=16:25:00";
+			let url = "includes/newUserInsert.inc.php?Username=Jeru&Password=testPass&Dob=1994-3-29&Phone=15552350&Address=123%20Place&Email=myName@site.com";
 			makeRequest(url, function(responseText) {
 				console.log("Url: "+url);
 				console.log(responseText);
 			});
 		}
 
+		if (spriteClicked(ui.createAccountButton)) {
+			changeScreen(SCREEN_CREATE_ACCOUNT);
+		}
+
+	} else if (ui.currentScreen == SCREEN_CREATE_ACCOUNT) {
+		if (onFirstFrame) {
+			ui.userNameField = createInputTextField("UserName");
+			ui.passwordField = createInputTextField("Password");
+			ui.dobField = createInputTextField("Dob");
+			ui.phoneField = createInputTextField("Phone number");
+			ui.addressField = createInputTextField("Address");
+			ui.emailField = createInputTextField("Email");
+			ui.createButton = createTextButtonSprite("Create");
+		}
+
+		placeAtTop(ui.userNameField);
+		placeUnder(ui.passwordField, ui.userNameField);
+		placeUnder(ui.dobField, ui.passwordField);
+		placeUnder(ui.phoneField, ui.dobField);
+		placeUnder(ui.addressField, ui.phoneField);
+		placeUnder(ui.emailField, ui.addressField);
+
+		placeAtBottom(ui.createButton);
+		if (spriteClicked(ui.createButton)) {
+			let url = "includes/newUserInsert.inc.php?";
+			url += "Username="+ui.userNameField.text + "&";
+			url += "Password="+ui.passwordField.text + "&";
+			url += "Dob="+ui.dobField.text + "&";
+			url += "Phone="+ui.phoneField.text + "&";
+			url += "Address="+ui.addressField.text + "&";
+			url += "Email="+ui.emailField.text;
+			makeRequest(url, function() {
+				showPopup("You user has been created, you can sign in now");
+				changeScreen(SCREEN_LOGIN);
+			});
+		}
 
 	} else if (ui.currentScreen == SCREEN_WAITING_FOR_SERVER) {
 		//@stp Time out on this screen
@@ -371,6 +421,9 @@ app.updateClient = function(delta) {
 			button.x = x * (button.width + pad) + offsetX;
 			button.y = y * (button.height + pad) + offsetY;
 
+			let show = showManager.shows[showManager.currentShowIndex];
+			let seat = show.seats[i];
+			if (seat.userId != 0) button.tint = 0x900000;
 			if (showManager.currentSeatIndices.indexOf(i) != -1) button.tint = 0xFFFF00;
 			if (spriteClicked(button)) {
 				selectSeat(i);
@@ -398,8 +451,7 @@ app.updateClient = function(delta) {
 			changeScreen(SCREEN_CART);
 		}
 
-		ui.editShowButton.x = ui.size.x*0.05;
-		ui.editShowButton.y = ui.size.y - ui.editShowButton.height - ui.size.y*0.05;
+		placeAtBottomLeft(ui.editShowButton);
 
 		// ui.editShowButton.visible = app.isAdmin;
 		if (spriteClicked(ui.editShowButton)) {
@@ -486,11 +538,6 @@ app.updateClient = function(delta) {
 		ui.buyButton.y = ui.size.y*0.85 - ui.buyButton.height;
 		if (spriteClicked(ui.buyButton)) {
 			chargeCreditCard(ui.nameField.text, ui.creditNumber.text, ui.dateField.text, 0); //@todo Figure out the price // The server probably has to do this
-			//changeScreen(SCREEN_WAITING_FOR_SERVER); //@todo(Jeru): Make this actually work
-			changeScreen(SCREEN_RECEIPT);
-			//@server buyTickets.php?seats=3,31,3,46,2,25,1,73 // These are interleaved showIds and seat numbers
-			//Success: 1
-			//Fail: 0,reasonString
 		}
 	} else if (ui.currentScreen == SCREEN_RECEIPT) {
 		//@stp There could be too many items to display
@@ -726,7 +773,13 @@ function makeRequest(url, onSuccess) {
 				showPopup("There was problem connecting");
 				changeScreen(SCREEN_LOGIN);
 			} else if (this.status == 200) {
-				onSuccess(this.responseText);
+				if (this.responseText.startsWith("Error:")) {
+					showPopup(this.responseText);
+					app.userId = 0;
+					changeScreen(SCREEN_LOGIN);
+				} else {
+					onSuccess(this.responseText);
+				}
 			}
 		}
 	}
@@ -762,6 +815,28 @@ function attemptLogin(username, password) {
 
 function selectShow(showIndex) {
 	showManager.currentShowIndex = showIndex;
+
+	let show = showManager.shows[showIndex];
+	show.seats = [];
+	for (let i = 0; i < THEATER_COLS*THEATER_ROWS; i++) {
+		let seat = {};
+		seat.userId = 0;
+		seat.price = 1000;
+		show.seats.push(seat);
+	}
+
+
+	let url = "includes/loadSeats.inc.php?ShowID="+show.id;
+	makeRequest(url, function(str) {
+		show.seats = [];
+		let stringArray = str.split("-");
+		for (let i = 0; i < stringArray.length; i += 2) {
+			let seat = {};
+			seat.userId = parseInt(stringArray[i]);
+			seat.price = parseInt(stringArray[i+1]);
+			show.seats.push(seat);
+		}
+	});
 }
 
 function selectSeat(seatId) {
@@ -775,7 +850,23 @@ function selectSeat(seatId) {
 }
 
 function chargeCreditCard(cardName, cardNumber, cvv, expDate, amount) {
-	
+	if (!cardNumber.startsWith("4") && !cardNumber.startsWith("5")) {
+		showPopup("Only Visa and MasterCard accepted!");
+		changeScreen(SCREEN_PAYMENT_INFO);
+		return;
+	}
+
+	let url = "includes/buySeats.php?UserID="+app.userId+"&str=";
+
+	for (let i = 0; i < cart.length; i++) {
+		let entry = cart[i];
+		url += entry.showId + "-";
+		url += entry.seatIndex;
+		if (i != cart.length-1) url += "-";
+	}
+	makeRequest(url, function(responseText) {
+		changeScreen(SCREEN_RECEIPT);
+	});
 }
 
 function showPopup(text) {

@@ -1,18 +1,20 @@
 <?php
 
 include 'connection.inc.php';
-$Showid=$_GET['ShowID'];
+$ShowID=$_GET['ShowID'];
 
-$sql="SELECT ShowID, SeatID, SeatPrice, SeatVacancy FROM Seats WHERE ShowID = $Showid";
+$sql="SELECT UserID, SeatPrice FROM Seats WHERE ShowID = $ShowID ORDER BY SeatID ASC";
 $result = $conn->query($sql);
 
 if ($result->num_rows > 0) {
-  // output data of each row
-  while($row = $result->fetch_assoc()) {
-    echo " ShowID: " . $row["ShowID"]. "  - SeatID: " . $row["SeatID"]. "S eatPrice: " . $row["SeatPrice"]. " -  SeatVacancy: " . $row["SeatVacancy"]. " <br>";
-  }
-} else {
-  echo "NO Seats created";
+	$output = "";
+	$count = 0;
+	while($row = $result->fetch_assoc()) {
+		$output .= $row["UserID"] . "-" . $row["SeatPrice"];
+		if ($count != 95) $output .= "-";
+		$count += 1;
+	}
+	echo $output;
 }
 $conn->close();
 ?> 

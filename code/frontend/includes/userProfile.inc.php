@@ -7,16 +7,15 @@
       public $userValidation="False";
       public $Null="NULL";
       
-  public function setUsername(){
-      $conn=require'connection.inc.php';
-      $sql="INSERT INTO `User_Profile` (`ID`, `Username`, `Password`, `UserStatus`) VALUES ($this->Null, '$this->Username', '$this->Password', '$this->UserStatus')";
-      if (mysqli_query($conn, $sql)) {
-		echo "New record created successfully !";
-	  } else {
-	 	echo "Error: " . $sql . "
-      " . mysqli_error($conn);
-   }
- }
+			public function setUsername(){
+				$conn=require'connection.inc.php';
+				$sql="INSERT INTO User_Profile (ID, Username, Password, UserStatus) VALUES ($this->Null, '$this->Username', '$this->Password', '$this->UserStatus')";
+				if (mysqli_query($conn, $sql)) {
+					echo "$conn->insert_id";
+				} else {
+					echo "Error: " . mysqli_error($conn);
+				}
+			}
   public function deleteUsername(){
       $conn=require'connection.inc.php';
       $getId="SELECT * FROM `User_Profile` WHERE `Username` LIKE '$this->Username'";
