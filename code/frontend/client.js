@@ -3,7 +3,6 @@
 // Reports (client/server)
 //@todo Prevent two people from buying the same seat
 //@todo Add back buttons
-//@todo Fix recipt screen
 //
 //@todo limit data sending string size for server
 //@todo Fix receipt screen since now we have tickets from multiple shows
@@ -210,6 +209,11 @@ app.updateClient = function(delta) {
 		sprite.y = ui.size.y*0.3 - sprite.height/2;
 	}
 
+	function placeAtTopLeft(sprite) {
+		sprite.x = ui.size.x*0.05;
+		sprite.y = ui.size.y*0.05;
+	}
+
 	function placeAtBottom(sprite) {
 		sprite.x = ui.size.x/2 - sprite.width/2;
 		sprite.y = ui.size.y - sprite.height/2 - ui.size.y*0.3;
@@ -408,7 +412,7 @@ app.updateClient = function(delta) {
 		}
 
 		let offsetX = ui.size.x/2 - totalWidth/2;
-		let offsetY = 20;
+		let offsetY = ui.size.y*0.15;
 
 		for (let i = 0; i < ui.seatButtons.length; i++) {
 			let button = ui.seatButtons[i];
@@ -456,6 +460,12 @@ app.updateClient = function(delta) {
 		// ui.editShowButton.visible = app.isAdmin;
 		if (spriteClicked(ui.editShowButton)) {
 			changeScreen(SCREEN_SHOW_EDITOR);
+		}
+
+		if (onFirstFrame) ui.backButton = createTextButtonSprite("Back");
+		placeAtTopLeft(ui.backButton);
+		if (spriteClicked(ui.backButton)) {
+			changeScreen(SCREEN_SHOW_LIST);
 		}
 
 	} else if (ui.currentScreen == SCREEN_CART) {
@@ -680,7 +690,7 @@ app.updateClient = function(delta) {
 	if (ui.popup != null) { /// Update popup
 		ui.popupTime += elapsed;
 
-		let maxTime = 5;
+		let maxTime = 2;
 		if (ui.popupTime > maxTime) {
 			let fadeTime = ui.popupTime - maxTime;
 			ui.popup.alpha = 1 - fadeTime;
