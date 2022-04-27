@@ -4,7 +4,7 @@
 //@todo Prevent two people from buying the same seat
 //@todo Add show
 //
-//@todo limit data sending string size for server
+//@todo reload shows between screens
 //@todo Fix receipt screen since now we have tickets from multiple shows
 //@todo Figure out the report screen in general
 //@todo Do seat editor
@@ -246,13 +246,12 @@ app.updateClient = function(delta) {
 		//@stp Failed to login in general
 		if (onFirstFrame) {
 			//@server user creation
-			ui.userField = createInputTextField("username");
-			ui.passField = createInputTextField("password");
+			ui.userField = createInputTextField("username", 50);
+			ui.passField = createInputTextField("password", 32);
 			ui.loginButton = createTextButtonSprite("Login");
 			ui.instantLogin = createTextButtonSprite("Instant login");
 			ui.debugButton = createTextButtonSprite("Debug code");
 			ui.createAccountButton = createTextButtonSprite("Create Account");
-
 		}
 		placeAtTop(ui.userField);
 		placeUnder(ui.passField, ui.userField);
@@ -290,12 +289,12 @@ app.updateClient = function(delta) {
 
 	} else if (ui.currentScreen == SCREEN_CREATE_ACCOUNT) {
 		if (onFirstFrame) {
-			ui.userNameField = createInputTextField("UserName");
-			ui.passwordField = createInputTextField("Password");
-			ui.dobField = createInputTextField("Dob");
-			ui.phoneField = createInputTextField("Phone number");
-			ui.addressField = createInputTextField("Address");
-			ui.emailField = createInputTextField("Email");
+			ui.userNameField = createInputTextField("Username", 50);
+			ui.passwordField = createInputTextField("Password", 32);
+			ui.dobField = createInputTextField("Dob", 32);
+			ui.phoneField = createInputTextField("Phone number", 16);
+			ui.addressField = createInputTextField("Address", 64);
+			ui.emailField = createInputTextField("Email", 64);
 			ui.createButton = createTextButtonSprite("Create");
 		}
 
@@ -524,13 +523,13 @@ app.updateClient = function(delta) {
 		//@stp Card could be rejected for not enough money
 		if (onFirstFrame) {
 			//@server Possibly load saved credit card info
-			ui.nameField = createInputTextField("Name on card");
-			ui.creditNumber = createInputTextField("Credit Card Number");
-			ui.cvvField = createInputTextField("CVV");
-			ui.dateField = createInputTextField("Date");
+			ui.nameField = createInputTextField("Name on card", 64);
+			ui.creditNumber = createInputTextField("Credit Card Number", 32);
+			ui.cvvField = createInputTextField("CVV", 4);
+			ui.dateField = createInputTextField("Date", 32);
 			// todo exp date picker
 
-			ui.zipField = createInputTextField("Zip");
+			ui.zipField = createInputTextField("Zip", 16);
 
 			ui.buyButton = createTextButtonSprite("Buy");
 		}
@@ -585,13 +584,13 @@ app.updateClient = function(delta) {
 		if (onFirstFrame) {
 			let show = showManager.shows[showManager.currentShowIndex];
 
-			ui.showNameField = createInputTextField("Show name");
+			ui.showNameField = createInputTextField("Show name", 250);
 			ui.showNameField.text = show.name;
 
-			ui.showDateField = createInputTextField("Show date");
+			ui.showDateField = createInputTextField("Show date", 32);
 			ui.showDateField.text = show.date.getFullYear() + "-" + show.date.getMonth() + "-" + show.date.getDate();
 
-			ui.showTimeField = createInputTextField("Show time");
+			ui.showTimeField = createInputTextField("Show time", 32);
 			ui.showTimeField.text = show.date.getHours() + ":" + show.date.getMinutes() + ":" + show.date.getSeconds(); //@todo Don't specify seconds
 
 			ui.saveButton = createTextButtonSprite("Save");
@@ -676,7 +675,7 @@ function createTextField() {
 	return field;
 }
 
-function createInputTextField(hintText) {
+function createInputTextField(hintText, maxLen) {
 	if (verboseLogging) console.log("Input text field created"); //@stp What if you accidently create a sprite every frame? Then you'll see this log message
 
 	let field = new PIXI.TextInput({
@@ -694,6 +693,7 @@ function createInputTextField(hintText) {
 	field.placeholder = hintText;
 	field.x = 100;
 	field.y = 100;
+	field.maxLength = maxLen;
 	ui.stageSprite.addChild(field);
 	ui.pixiInputFields.push(field);
 	return field;
