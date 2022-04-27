@@ -52,12 +52,13 @@ ui.textCursorSprite = null;
 
 ui.prevScreen = -1;
 ui.currentScreen = SCREEN_NONE;
+ui.screenTime = 0;
 
 ui.popup = null;
 ui.popupTime = 0;
 
-ui.bgSprite = null;
 ui.stageSprite = null;
+ui.bgColorSprite = null;
 ui.foregroundSprite = null;
 
 let showManager = {};
@@ -87,9 +88,9 @@ function runClient() {
 	ui.foregroundSprite = new PIXI.Sprite();
 	app.pixiApp.stage.addChild(ui.foregroundSprite);
 
-	ui.bgSprite = new PIXI.Sprite.from("assets/white.png");
-	ui.bgSprite.tint = 0xFF262626;
-	ui.stageSprite.addChild(ui.bgSprite);
+	ui.bgColorSprite = new PIXI.Sprite.from("assets/white.png");
+	ui.bgColorSprite.tint = 0xFF262626;
+	ui.stageSprite.addChild(ui.bgColorSprite);
 
 	ui.stageSprite.interactive = true;
 	ui.stageSprite.on("mousemove", function(e) {
@@ -196,13 +197,13 @@ app.updateClient = function(delta) {
 		ui.selectedInputField = false;
 
 		ui.prevScreen = ui.currentScreen;
+		ui.screenTime = 0;
 		onFirstFrame = true;
 	}
 
-	if (ui.stageSprite != null) {
-		ui.bgSprite.width = ui.size.x;
-		ui.bgSprite.height = ui.size.y;
-	}
+	ui.bgColorSprite.width = ui.size.x;
+	ui.bgColorSprite.height = ui.size.y;
+	ui.stageSprite.x = clampMap(ui.screenTime, 0, 0.5, ui.size.x, 0, QUAD_OUT);
 
 	function placeAtTop(sprite) {
 		sprite.x = ui.size.x/2 - sprite.width/2;
@@ -701,12 +702,12 @@ app.updateClient = function(delta) {
 	ui.mouseJustDown = false;
 	ui.mouseJustUp = false;
 
+	ui.screenTime += elapsed;
 	app.time += elapsed;
 }
 
 function changeScreen(newScreen) {
 	ui.currentScreen = newScreen;
-	ui.screenTime = 0;
 }
 
 function createTextField() {
@@ -960,4 +961,126 @@ function getParamNames(func) {
   var result = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')')).match(ARGUMENT_NAMES);
   if(result === null) result = [];
   return result;
+}
+
+/// Math stuff
+function clamp(x, min, max) {
+	if (x < min) return min;
+	if (x > max) return max;
+	return x;
+}
+function norm(min, max, value) { return (value-min)/(max-min); }
+function lerp(min, max, perc) { return min + (max - min) * perc; }
+
+function clampMap(value, sourceMin, sourceMax, destMin, destMax, ease) {
+	let perc = norm(sourceMin, sourceMax, value);
+	perc = clamp(perc, 0, 1);
+	perc = tweenEase(perc, ease);
+	return lerp(destMin, destMax, perc);
+}
+
+let LINEAR = 0;
+let QUAD_IN = 1; let QUAD_OUT = 2; let QUAD_IN_OUT = 3;
+let CUBIC_IN = 4; let CUBIC_OUT = 5; let CUBIC_IN_OUT = 6;
+let QUART_IN = 7; let QUART_OUT = 8; let QUART_IN_OUT = 9;
+let QUINT_IN = 10; let QUINT_OUT = 11; let QUINT_IN_OUT = 12;
+let SINE_IN = 13; let SINE_OUT = 14; let SINE_IN_OUT = 15;
+let CIRC_IN = 16; let CIRC_OUT = 17; let CIRC_IN_OUT = 18;
+let EXP_IN = 19; let EXP_OUT = 20; let EXP_IN_OUT = 21;
+let ELASTIC_IN = 22; let ELASTIC_OUT = 23; let ELASTIC_IN_OUT = 24;
+let BACK_IN = 25; let BACK_OUT = 26; let BACK_IN_OUT = 27;
+let BOUNCE_IN = 28; let BOUNCE_OUT = 29; let BOUNCE_IN_OUT = 30;
+
+function tweenEase(p, ease) {
+	let piOver2 = 3.14159/2;
+	if (ease == LINEAR) {
+		return p;
+	} else if (ease == QUAD_IN) {
+		return p * p;
+	} else if (ease == QUAD_OUT) {
+		return -(p * (p - 2));
+	} else if (ease == QUAD_IN_OUT) {
+		if (p < 0.5) return 2 * p * p;
+		else return (-2 * p * p) + (4 * p) - 1;
+	} else if (ease == CUBIC_IN) {
+		return p * p * p;
+	} else if (ease == CUBIC_OUT) {
+		let f = (p - 1);
+		return f * f * f + 1;
+	} else if (ease == CUBIC_IN_OUT) {
+		let f = ((2 * p) - 2);
+		if (p < 0.5) return 4 * p * p * p;
+		else return 0.5 * f * f * f + 1;
+	} else if (ease == QUART_IN) {
+		return p * p * p * p;
+	} else if (ease == QUART_OUT) {
+		let f = (p - 1);
+		return f * f * f * (1 - p) + 1;
+	} else if (ease == QUART_IN_OUT) {
+		let f = (p - 1);
+		if (p < 0.5) return 8 * p * p * p * p;
+		else return -8 * f * f * f * f + 1;
+	} else if (ease == QUINT_IN) {
+		return p * p * p * p * p;
+	} else if (ease == QUINT_OUT) {
+		let f = (p - 1);
+		return f * f * f * f * f + 1;
+	} else if (ease == QUINT_IN_OUT) {
+		let f = ((2 * p) - 2);
+		if (p < 0.5) return 16 * p * p * p * p * p;
+		else return  0.5 * f * f * f * f * f + 1;
+	} else if (ease == SINE_IN) {
+		return Math.sin((p - 1) * piOver2) + 1;
+	} else if (ease == SINE_OUT) {
+		return Math.sin(p * piOver2);
+	} else if (ease == SINE_IN_OUT) {
+		return 0.5 * (1 - Math.cos(p * M_PI));
+	} else if (ease == CIRC_IN) {
+		return 1 - sqrt(1 - (p * p));
+	} else if (ease == CIRC_OUT) {
+		return sqrt((2 - p) * p);
+	} else if (ease == CIRC_IN_OUT) {
+		if (p < 0.5) return 0.5 * (1 - sqrt(1 - 4 * (p * p)));
+		else return 0.5 * (sqrt(-((2 * p) - 3) * ((2 * p) - 1)) + 1);
+	} else if (ease == EXP_IN) {
+		return (p == 0.0) ? p : pow(2, 10 * (p - 1));
+	} else if (ease == EXP_OUT) {
+		return (p == 1.0) ? p : 1 - pow(2, -10 * p);
+	} else if (ease == EXP_IN_OUT) {
+		if (p == 0.0 || p == 1.0) return p;
+		if (p < 0.5) return 0.5 * pow(2, (20 * p) - 10);
+		else return -0.5 * pow(2, (-20 * p) + 10) + 1;
+	} else if (ease == ELASTIC_IN) {
+		return Math.sin(13 * piOver2 * p) * pow(2, 10 * (p - 1));
+	} else if (ease == ELASTIC_OUT) {
+		return Math.sin(-13 * piOver2 * (p + 1)) * pow(2, -10 * p) + 1;
+	} else if (ease == ELASTIC_IN_OUT) {
+		if (p < 0.5) return 0.5 * Math.sin(13 * piOver2 * (2 * p)) * pow(2, 10 * ((2 * p) - 1));
+		else return 0.5 * (Math.sin(-13 * piOver2 * ((2 * p - 1) + 1)) * pow(2, -10 * (2 * p - 1)) + 2);
+	} else if (ease == BACK_IN) {
+		return p * p * p - p * Math.sin(p * M_PI);
+	} else if (ease == BACK_OUT) {
+		let f = (1 - p);
+		return 1 - (f * f * f - f * Math.sin(f * M_PI));
+	} else if (ease == BACK_IN_OUT) {
+		if (p < 0.5) {
+			let f = 2 * p;
+			return 0.5 * (f * f * f - f * Math.sin(f * M_PI));
+		} else {
+			let f = (1 - (2*p - 1));
+			return 0.5 * (1 - (f * f * f - f * Math.sin(f * M_PI))) + 0.5;
+		}
+	} else if (ease == BOUNCE_IN) {
+		return 1 - tweenEase(1 - p, BOUNCE_OUT);
+	} else if (ease == BOUNCE_OUT) {
+		if (p < 4/11.0) return (121 * p * p)/16.0;
+		else if (p < 8/11.0) return (363/40.0 * p * p) - (99/10.0 * p) + 17/5.0;
+		else if (p < 9/10.0) return (4356/361.0 * p * p) - (35442/1805.0 * p) + 16061/1805.0;
+		else return (54/5.0 * p * p) - (513/25.0 * p) + 268/25.0;
+	} else if (ease == BOUNCE_IN_OUT) {
+		if (p < 0.5) return 0.5 * tweenEase(p*2, BOUNCE_IN);
+		else return 0.5 * tweenEase(p * 2 - 1, BOUNCE_OUT) + 0.5;
+	}
+
+	return 0;
 }
