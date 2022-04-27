@@ -34,21 +34,15 @@ app.pixiApp = null;
 app.time = 0;
 
 let ui = {};
-ui.size = {};
 ui.mouse = {};
 ui.mouseDown = false;
 ui.mouseJustDown = false;
 ui.mouseJustUp = false;
-ui.size.x = 0;
-ui.size.y = 0;
+ui.prevSize = {x: 0, y: 0};
+ui.size = {x: 0, y: 0};
 ui.pixiFields = [];
 ui.pixiInputFields = [];
-ui.pixiInputFieldBackgrounds = [];
 ui.pixiSprites = [];
-
-ui.selectedInputField = null;
-ui.selectedInputFieldTime = 0;
-ui.textCursorSprite = null;
 
 ui.prevScreen = -1;
 ui.currentScreen = SCREEN_NONE;
@@ -120,14 +114,6 @@ function runClient() {
 		ui.mouseDown = false;
 	});
 
-	// Create invisible text field
-	app.inputHtmlElement = document.createElement("INPUT");
-	app.inputHtmlElement.setAttribute("style", "position:absolute; left: 0px; top: 0px; width: 100%; height: 10%; opacity: 0%"); //@todo Make this unclickable
-	document.body.appendChild(app.inputHtmlElement);
-
-	ui.textCursorSprite = new PIXI.Sprite.from("assets/black.png");
-	ui.foregroundSprite.addChild(ui.textCursorSprite);
-
 	//@server loadShows.php?after=2525278934
 	//ShowID1, ShowName1, ShowDate1
 	//ShowID2, ShowName2, ShowDate2
@@ -188,18 +174,25 @@ app.updateClient = function(delta) {
 	if (ui.prevScreen != ui.currentScreen) {
 		for (let i = 0; i < ui.pixiFields.length; i++) ui.stageSprite.removeChild(ui.pixiFields[i]);
 		for (let i = 0; i < ui.pixiInputFields.length; i++) ui.stageSprite.removeChild(ui.pixiInputFields[i]);
-		for (let i = 0; i < ui.pixiInputFieldBackgrounds.length; i++) ui.stageSprite.removeChild(ui.pixiInputFieldBackgrounds[i]);
 		for (let i = 0; i < ui.pixiSprites.length; i++) ui.stageSprite.removeChild(ui.pixiSprites[i]);
 		ui.pixiFields = [];
 		ui.pixiInputFields = [];
-		ui.pixiInputFieldBackgrounds = [];
 		ui.pixiSprites = [];
-		ui.selectedInputField = false;
 
 		ui.prevScreen = ui.currentScreen;
 		ui.screenTime = 0;
 		onFirstFrame = true;
 	}
+
+	let screenSizeChanged = false;
+	if (ui.prevSize.x != ui.size.x || ui.prevSize.y != ui.size.y) {
+		ui.prevSize.x = ui.size.x;
+		ui.prevSize.y = ui.size.y;
+		screenSizeChanged = true;
+	}
+
+	let isPortraitMode = false;
+	if (ui.size.y > ui.size.x) isPortraitMode = true;
 
 	ui.bgColorSprite.width = ui.size.x;
 	ui.bgColorSprite.height = ui.size.y;
@@ -254,6 +247,7 @@ app.updateClient = function(delta) {
 			ui.instantLogin = createTextButtonSprite("Instant login");
 			ui.debugButton = createTextButtonSprite("Debug code");
 			ui.createAccountButton = createTextButtonSprite("Create Account");
+
 		}
 		placeAtTop(ui.userField);
 		placeUnder(ui.passField, ui.userField);
@@ -634,54 +628,14 @@ app.updateClient = function(delta) {
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	}
 
-	{ /// Update input field
-		ui.textCursorSprite.alpha = 0;
-		for (let i = 0; i < ui.pixiInputFields.length; i++) {
-			let bg = ui.pixiInputFieldBackgrounds[i];
-			let field = ui.pixiInputFields[i];
-
-			let pad = 5;
-			bg.width = field.width + pad;
-			if (bg.width < ui.size.x*0.25) bg.width = ui.size.x*0.25;
-			bg.height = field.height + pad;
-
-			bg.x = field.x + field.width/2 - bg.width/2;
-			bg.y = field.y + field.height/2 - bg.height/2;
-
-			if (field == ui.selectedInputField) {
-				field.style.fill = 0x404080;
-				let cursorPhase = (Math.sin(ui.selectedInputFieldTime*2*Math.PI*2-Math.PI*0.5)/2)+0.5;
-
-				ui.textCursorSprite.width = ui.size.x*0.005;
-				ui.textCursorSprite.height = field.height;
-				ui.textCursorSprite.x = field.x + field.width;
-				ui.textCursorSprite.y = field.y;
-				ui.textCursorSprite.alpha = cursorPhase;
-
-				let len = app.inputHtmlElement.value.length;
-				app.inputHtmlElement.setSelectionRange(len, len);
-
-				ui.selectedInputFieldTime += elapsed;
+	for (let i = 0; i < ui.pixiInputFields.length; i++) {
+		let field = ui.pixiInputFields[i];
+		if (screenSizeChanged || ui.screenTime == 0) {
+			if (isPortraitMode) {
+				field.setInputStyle("width", ui.size.x*0.8+"px");
 			} else {
-				field.style.fill = 0x000000;
+				field.setInputStyle("width", ui.size.x*0.2+"px");
 			}
-
-			if (spriteClicked(bg) && ui.selectedInputField != field) {
-				ui.selectedInputField = field;
-				ui.selectedInputFieldTime = 0;
-
-				app.inputHtmlElement.value = ui.selectedInputField.text;
-
-				setTimeout(function() {
-					app.inputHtmlElement.blur();
-				}, 100);
-				setTimeout(function() {
-					app.inputHtmlElement.focus();
-				}, 200);
-			}
-
-			//@stp What if the user types a weird character
-			ui.selectedInputField.text = app.inputHtmlElement.value;
 		}
 	}
 
@@ -719,13 +673,21 @@ function createTextField() {
 
 function createInputTextField(hintText) {
 	if (verboseLogging) console.log("Input text field created"); //@stp What if you accidently create a sprite every frame? Then you'll see this log message
-	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
-	sprite.tint = 0xFFE0E0E0;
-	ui.stageSprite.addChild(sprite);
-	ui.pixiInputFieldBackgrounds.push(sprite);
 
-	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
-	field.text = hintText;
+	let field = new PIXI.TextInput({
+		input: {
+			fontSize: '25pt',
+			padding: '14px',
+			width: '500px',
+			color: '#26272E'
+		}, box: {
+			default: {fill: 0xE8E9F3, rounded: 16, stroke: {color: 0xCBCEE0, width: 4}},
+			focused: {fill: 0xE1E3EE, rounded: 16, stroke: {color: 0xABAFC6, width: 4}},
+			disabled: {fill: 0xDBDBDB, rounded: 16}
+		}
+	});
+	field.x = 100;
+	field.y = 100;
 	ui.stageSprite.addChild(field);
 	ui.pixiInputFields.push(field);
 	return field;
