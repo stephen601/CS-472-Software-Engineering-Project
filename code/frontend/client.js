@@ -1,12 +1,10 @@
-// Admin mode (client/server)
-// Seat price editor (client/server)
-// Reports (client/server)
+//@todo Make Seat price editor in the client
 //@todo Prevent two people from buying the same seat
 //@todo Add show
+//@todo Make reports better
 //
 //@todo reload shows between screens
 //@todo Fix receipt screen since now we have tickets from multiple shows
-//@todo Figure out the report screen in general
 //@todo Do seat editor
 //@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
@@ -30,6 +28,7 @@ let SCREEN_REPORT             = 11;
 let app = {};
 app.pixiApp = null;
 app.userId = 0;
+app.isAdmin = 0;
 app.time = 0;
 
 let ui = {};
@@ -249,7 +248,8 @@ app.updateClient = function(delta) {
 	}
 
 	function placeUnder(below, above) {
-		below.x = ui.size.x / 2 - below.width / 2;
+		// below.x = ui.size.x / 2 - below.width / 2;
+		below.x = above.x + above.width/2 - below.width/2;
 		below.y = above.y + above.height + 10;
 	}
 
@@ -374,11 +374,12 @@ app.updateClient = function(delta) {
 				let sprite = createTextButtonSprite(buttonLabel);
 				ui.showButtons.push(sprite);
 			}
-			ui.addButton = createTextButtonSprite("Add show");
 
+			ui.addButton = createTextButtonSprite("Add show");
 			ui.cartButton = createTextButtonSprite("Cart");
 		}
 
+		ui.addButton.visible = app.isAdmin;
 		ui.addButton.x = ui.size.x*0.8 - ui.addButton.width/2;
 		ui.addButton.y = ui.size.y*0.9 - ui.addButton.height;
 		if (spriteClicked(ui.addButton)) { // if the button add show is clicked then.. 
@@ -392,6 +393,13 @@ app.updateClient = function(delta) {
 		ui.cartButton.y = ui.size.y*0.9 - ui.cartButton.height;
 		if (spriteClicked(ui.cartButton)) {
 			changeScreen(SCREEN_CART);
+		}
+
+		if (onFirstFrame) ui.reportButton = createTextButtonSprite("Get report");
+		ui.reportButton.visible = app.isAdmin;
+		placeUnder(ui.reportButton, ui.addButton);
+		if (spriteClicked(ui.reportButton)) {
+			changeScreen(SCREEN_REPORT);
 		}
 
 		let yPos = 0;
@@ -447,7 +455,7 @@ app.updateClient = function(delta) {
 
 		for (let i = 0; i < ui.seatButtons.length; i++) {
 			let button = ui.seatButtons[i];
-			button.tint = 0xFFFFFF;
+			button.tint = 0x60FF60;
 
 			let x = i % THEATER_COLS;
 			let y = Math.floor(i / THEATER_COLS);
@@ -488,7 +496,8 @@ app.updateClient = function(delta) {
 
 		placeAtBottomLeft(ui.editShowButton);
 
-		// ui.editShowButton.visible = app.isAdmin;
+		ui.editShowButton.visible = app.isAdmin;
+
 		if (spriteClicked(ui.editShowButton)) {
 			changeScreen(SCREEN_SHOW_EDITOR);
 		}
@@ -644,13 +653,19 @@ app.updateClient = function(delta) {
 
 		}
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
+		// http://127.0.0.1/theater/includes/changeSeatPrices.php?ShowID=32&SeatsStr=1-2-3-5-6-7&NewPrice=25
 		//@server editSeats.php?showId=3&seats=2,52,26,12&price=5
 		// 1
 	} else if (ui.currentScreen == SCREEN_REPORT) {
-		//@stp @todo
 		if (onFirstFrame) {
-			//@server getAllReceipts.php
+			ui.reportField = createTextField("Hello");
+
+			makeRequest("includes/getReport.php?ReceiptDateMin=2020-1-1&ReceiptDateMax=3000-1-1", function(responseText) {
+				ui.reportField.text = responseText;
+			});
 		}
+
+		placeAtTop(ui.reportField);
 
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	}
@@ -924,20 +939,29 @@ function attemptLogin(username, password) {
 	//False<br> Username does not exist.
 
 	function onComplete(responseText) {
-		let prefix = responseText.substring(0, 4);
-		if (prefix == "True") {
-			let colonIndex = responseText.indexOf(":");
-			if (colonIndex == -1) console.log("No colon?!"); //@stp
-			let numberStr = responseText.substring(colonIndex+2);
-			app.userId = parseInt(numberStr);
-			showPopup("Welcome user "+app.userId);
-			changeScreen(SCREEN_SHOW_LIST);
-		} else if (prefix == "Fals") {
-			showPopup("Wrong credientials");
-			changeScreen(SCREEN_LOGIN);
-		} else {
-			console.log("Bad output: "+responseText);
-		}
+		console.log(responseText);
+		let stringArray = responseText.split("|");
+		app.userId = parseInt(stringArray[0]);
+		app.isAdmin = parseInt(stringArray[1]);
+		showPopup("Welcome user "+app.userId);
+		changeScreen(SCREEN_SHOW_LIST);
+		// for (let i = 0; i < stringArray.length; i++) {
+
+		// }
+		// let prefix = responseText.substring(0, 4);
+		// if (prefix == "True") {
+		// 	let colonIndex = responseText.indexOf(":");
+		// 	if (colonIndex == -1) console.log("No colon?!"); //@stp
+		// 	let numberStr = responseText.substring(colonIndex+2);
+		// 	app.userId = parseInt(numberStr);
+		// 	showPopup("Welcome user "+app.userId);
+		// 	changeScreen(SCREEN_SHOW_LIST);
+		// } else if (prefix == "Fals") {
+		// 	showPopup("Wrong credientials");
+		// 	changeScreen(SCREEN_LOGIN);
+		// } else {
+		// 	console.log("Bad output: "+responseText);
+		// }
 	}
 
 	makeRequest("includes/login.inc.php?username="+username+"&password="+password, onComplete);
@@ -994,6 +1018,7 @@ function chargeCreditCard(cardName, cardNumber, cvv, expDate, amount) {
 		url += entry.seatIndex;
 		if (i != cart.length-1) url += "-";
 	}
+
 	makeRequest(url, function(responseText) {
 		changeScreen(SCREEN_RECEIPT);
 	});

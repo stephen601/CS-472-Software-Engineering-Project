@@ -5,4 +5,4 @@ $password = $_GET['password'];
 $userPro = new UserProfile;
 $userPro->Username=$username;
 $userPro->Password=$password;
-echo $userPro->getUsername(); 
+$userPro->getUsername(); 

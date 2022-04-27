@@ -15,12 +15,16 @@ if ($simulateNoMoney) {
 		$SeatID = intval($stringArray[$i+1]);
 		$sql = "UPDATE Seats SET UserID=$UserID WHERE ShowID = $ShowID AND SeatID = $SeatID" ;
 
-		// echo "Error: Not MasterCard";
-		// break;
 		if (!$conn->query($sql)) {
 			echo "Error: Failed to update seat ". $SeatID . " for show " . $ShowID;
 			break;
 		}
+	}
+
+	$dt = date('Y-m-d H:i:s');
+	$sql = "INSERT INTO Receipt (UserID, Purchase, FinalPrice, DateTime) VALUES ('$UserID', '$purchaseStr', 0, '$dt')";
+	if (!$conn->query($sql)) {
+		echo "Error: " . mysqli_error($conn);
 	}
 }
 ?> 

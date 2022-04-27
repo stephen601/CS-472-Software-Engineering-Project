@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: Apr 23, 2022 at 08:52 PM
+-- Generation Time: Apr 26, 2022 at 01:00 AM
 -- Server version: 10.6.5-MariaDB
 -- PHP Version: 7.4.26
 
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS `event` (
 --
 
 INSERT INTO `event` (`ShowID`, `ShowName`, `ShowDate`, `ShowTime`, `ShowPrice`) VALUES
-(32, 'newName', '2022-04-25', '16:25:00', 0),
+(32, 'newName', '2024-07-29', '18:35:00', 0),
 (33, 'testShow', '2022-04-21', '15:25:00', 0);
 
 -- --------------------------------------------------------
@@ -107,13 +107,21 @@ CREATE TABLE IF NOT EXISTS `payment_info` (
 
 DROP TABLE IF EXISTS `receipt`;
 CREATE TABLE IF NOT EXISTS `receipt` (
-  `Receipt ID` int(11) NOT NULL,
-  `ShowName` char(250) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ShowDate` date NOT NULL,
-  `ShowTime` time NOT NULL,
-  `SeatNumber` int(11) NOT NULL,
-  `FinalPrice` double NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `ReceiptID` int(11) NOT NULL AUTO_INCREMENT,
+  `DateTime` datetime NOT NULL,
+  `UserID` int(11) NOT NULL,
+  `Purchase` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `FinalPrice` double NOT NULL,
+  PRIMARY KEY (`ReceiptID`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `receipt`
+--
+
+INSERT INTO `receipt` (`ReceiptID`, `DateTime`, `UserID`, `Purchase`, `FinalPrice`) VALUES
+(9, '0000-00-00 00:00:00', 26, '32-15-32-27', 0),
+(10, '2022-04-26 00:08:32', 26, '32-56-32-68', 0);
 
 -- --------------------------------------------------------
 
@@ -157,37 +165,37 @@ CREATE TABLE IF NOT EXISTS `seats` (
 
 INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (32, 0, 5, 0),
-(32, 1, 5, 22),
-(32, 2, 5, 22),
-(32, 3, 5, 22),
-(32, 4, 5, 0),
-(32, 5, 5, 0),
-(32, 6, 5, 0),
-(32, 7, 5, 0),
-(32, 8, 5, 0),
+(32, 1, 25, 22),
+(32, 2, 25, 22),
+(32, 3, 25, 22),
+(32, 4, 5, 26),
+(32, 5, 25, 0),
+(32, 6, 25, 26),
+(32, 7, 25, 0),
+(32, 8, 5, 26),
 (32, 9, 5, 0),
 (32, 10, 5, 0),
 (32, 11, 5, 0),
 (32, 12, 5, 0),
 (32, 13, 5, 0),
 (32, 14, 5, 0),
-(32, 15, 5, 0),
-(32, 16, 5, 0),
+(32, 15, 5, 26),
+(32, 16, 5, 26),
 (32, 17, 5, 0),
-(32, 18, 5, 0),
-(32, 19, 5, 0),
-(32, 20, 5, 0),
+(32, 18, 5, 26),
+(32, 19, 5, 26),
+(32, 20, 5, 26),
 (32, 21, 5, 0),
 (32, 22, 5, 0),
 (32, 23, 5, 0),
 (32, 24, 5, 0),
 (32, 25, 5, 0),
 (32, 26, 5, 0),
-(32, 27, 5, 0),
+(32, 27, 5, 26),
 (32, 28, 5, 26),
 (32, 29, 5, 0),
 (32, 30, 5, 26),
-(32, 31, 5, 0),
+(32, 31, 5, 26),
 (32, 32, 5, 0),
 (32, 33, 5, 0),
 (32, 34, 5, 0),
@@ -212,7 +220,7 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (32, 53, 5, 0),
 (32, 54, 5, 0),
 (32, 55, 5, 0),
-(32, 56, 5, 0),
+(32, 56, 5, 26),
 (32, 57, 5, 0),
 (32, 58, 5, 0),
 (32, 59, 5, 0),
@@ -224,7 +232,7 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (32, 65, 5, 0),
 (32, 66, 5, 0),
 (32, 67, 5, 0),
-(32, 68, 5, 0),
+(32, 68, 5, 26),
 (32, 69, 5, 0),
 (32, 70, 5, 0),
 (32, 71, 5, 0),
@@ -259,7 +267,7 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (33, 4, 5, 22),
 (33, 5, 5, 22),
 (33, 6, 5, 22),
-(33, 7, 5, 0),
+(33, 7, 5, 26),
 (33, 8, 5, 0),
 (33, 9, 5, 0),
 (33, 10, 5, 0),
@@ -271,7 +279,7 @@ INSERT INTO `seats` (`ShowID`, `SeatID`, `SeatPrice`, `UserID`) VALUES
 (33, 16, 5, 0),
 (33, 17, 5, 0),
 (33, 18, 5, 0),
-(33, 19, 5, 0),
+(33, 19, 5, 26),
 (33, 20, 5, 0),
 (33, 21, 5, 0),
 (33, 22, 5, 0),
@@ -366,15 +374,15 @@ CREATE TABLE IF NOT EXISTS `user_profile` (
   `Address` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `Email` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `user_profile`
 --
 
 INSERT INTO `user_profile` (`ID`, `Username`, `Password`, `IsAdmin`, `Dob`, `Phone`, `Address`, `Email`) VALUES
-(26, 'Jeru', 'testPass', 0, '1994-03-29', '15552350', '123 Place', 'myName@site.com'),
-(27, 'UserName2', 'Password', 0, '1991-03-24', '21312412', 'Address', 'Email');
+(26, 'Jeru', 'testPass', 1, '1994-03-29', '15552350', '123 Place', 'myName@site.com'),
+(27, 'TestUser', 'TestPass', 0, '1991-03-24', '21312412', 'Address', 'Email');
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
