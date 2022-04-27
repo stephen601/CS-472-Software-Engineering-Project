@@ -8,7 +8,6 @@
 //@todo Fix receipt screen since now we have tickets from multiple shows
 //@todo Figure out the report screen in general
 //@todo Do seat editor
-//@todo Do transitions
 //@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
 
@@ -46,12 +45,15 @@ ui.dateTimePickers = [];
 ui.prevScreen = -1;
 ui.currentScreen = SCREEN_NONE;
 ui.screenTime = 0;
+ui.screenTransBackwards = false;
+ui.prevScreenTexture = null;
 
 ui.popup = null;
 ui.popupTime = 0;
 
 ui.stageSprite = null;
-ui.bgColorSprite = null;
+ui.stageInteractionSprite = null;
+ui.backgroundSprite = null;
 ui.foregroundSprite = null;
 
 let showManager = {};
@@ -76,15 +78,18 @@ function runClient() {
 	pixiApp.ticker.add(app.updateClient);
 	app.pixiApp = pixiApp;
 
+	ui.backgroundSprite = new PIXI.Sprite();
+	app.pixiApp.stage.addChild(ui.backgroundSprite);
+
 	ui.stageSprite = new PIXI.Sprite();
 	app.pixiApp.stage.addChild(ui.stageSprite);
 
 	ui.foregroundSprite = new PIXI.Sprite();
 	app.pixiApp.stage.addChild(ui.foregroundSprite);
 
-	ui.bgColorSprite = new PIXI.Sprite.from("assets/white.png");
-	ui.bgColorSprite.tint = 0xFF262626;
-	ui.stageSprite.addChild(ui.bgColorSprite);
+	ui.stageInteractionSprite = new PIXI.Sprite.from("assets/white.png");
+	ui.stageInteractionSprite.tint = 0xFF262626;
+	ui.stageSprite.addChild(ui.stageInteractionSprite);
 
 	ui.stageSprite.interactive = true;
 	ui.stageSprite.on("mousemove", function(e) {
@@ -180,6 +185,20 @@ app.updateClient = function(delta) {
 
 	let onFirstFrame = false;
 	if (ui.prevScreen != ui.currentScreen) {
+		if (ui.prevScreen != -1) {
+			if (ui.prevScreenSprite) {
+				ui.prevScreenSprite.parent.removeChild(ui.prevScreenSprite);
+				ui.prevScreenSprite.destroy();
+			}
+			let texture = app.pixiApp.renderer.generateTexture(ui.stageSprite);
+			ui.prevScreenSprite = new PIXI.Sprite(texture);
+			if (ui.screenTransBackwards) {
+				ui.foregroundSprite.addChild(ui.prevScreenSprite);
+			} else {
+				ui.backgroundSprite.addChild(ui.prevScreenSprite);
+			}
+		}
+
 		function removeAllChildren(sprite, startingAt) {
 			while (sprite.children.length > startingAt) {
 				sprite.removeChild(sprite.children[startingAt]);
@@ -197,9 +216,22 @@ app.updateClient = function(delta) {
 	let isPortraitMode = false;
 	if (ui.size.y > ui.size.x) isPortraitMode = true;
 
-	ui.bgColorSprite.width = ui.size.x;
-	ui.bgColorSprite.height = ui.size.y;
-	ui.stageSprite.x = clampMap(ui.screenTime, 0, 0.5, ui.size.x, 0, QUAD_OUT);
+	ui.stageInteractionSprite.width = ui.size.x;
+	ui.stageInteractionSprite.height = ui.size.y;
+
+	if (isPortraitMode) {
+		if (ui.screenTransBackwards) {
+			ui.prevScreenSprite.x = clampMap(ui.screenTime, 0, 0.25, 0, ui.size.x, 0);
+		} else {
+			ui.stageSprite.x = clampMap(ui.screenTime, 0, 0.25, ui.size.x, 0, QUAD_OUT);
+		}
+	} else {
+		if (ui.screenTransBackwards) {
+			ui.prevScreenSprite.alpha = clampMap(ui.screenTime, 0, 0.25, 1, 0, QUAD_OUT);
+		} else {
+			ui.stageSprite.alpha = clampMap(ui.screenTime, 0, 0.25, 0, 1, QUAD_OUT);
+		}
+	}
 
 	function placeAtTop(sprite) {
 		sprite.x = ui.size.x/2 - sprite.width/2;
@@ -235,7 +267,7 @@ app.updateClient = function(delta) {
 		if (onFirstFrame) ui.backButton = createTextButtonSprite("Back");
 		placeAtTopLeft(ui.backButton);
 		if (spriteClicked(ui.backButton)) {
-			changeScreen(prevScreen);
+			changeScreenBackwards(prevScreen);
 		}
 	}
 
@@ -770,6 +802,12 @@ app.updateClient = function(delta) {
 }
 
 function changeScreen(newScreen) {
+	ui.screenTransBackwards = false;
+	ui.currentScreen = newScreen;
+}
+
+function changeScreenBackwards(newScreen) {
+	ui.screenTransBackwards = true;
 	ui.currentScreen = newScreen;
 }
 
