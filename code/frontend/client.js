@@ -4,6 +4,7 @@
 //@todo Prevent two people from buying the same seat
 //@todo Add show
 //
+//@todo Remove children automatically
 //@todo reload shows between screens
 //@todo Fix receipt screen since now we have tickets from multiple shows
 //@todo Figure out the report screen in general
@@ -13,7 +14,7 @@
 //@todo Prevent cart and show list screen from overflowing the layout
 
 let verboseLogging = false;
-let defaultFontSize = 40;
+let defaultFontSize = 30;
 
 let SCREEN_NONE               = 0;
 let SCREEN_LOGIN              = 1;
@@ -30,6 +31,7 @@ let SCREEN_REPORT             = 11;
 
 let app = {};
 app.pixiApp = null;
+app.userId = 0;
 app.time = 0;
 
 let ui = {};
@@ -42,6 +44,7 @@ ui.size = {x: 0, y: 0};
 ui.pixiFields = [];
 ui.pixiInputFields = [];
 ui.pixiSprites = [];
+ui.dateTimePickers = [];
 
 ui.prevScreen = -1;
 ui.currentScreen = SCREEN_NONE;
@@ -63,6 +66,8 @@ let cart = [];
 
 let THEATER_ROWS = 8;
 let THEATER_COLS = 12;
+
+let debugMode = true;
 
 function runClient() {
 	let pixiApp = new PIXI.Application({
@@ -112,11 +117,6 @@ function runClient() {
 		ui.mouseDown = false;
 	});
 
-	//@server loadShows.php?after=2525278934
-	//ShowID1, ShowName1, ShowDate1
-	//ShowID2, ShowName2, ShowDate2
-	//...
-
 	function getShowsFromServer() {
 
 		function parseShowData(data) {
@@ -131,7 +131,6 @@ function runClient() {
 				let show = {};
 				show.id = parseInt(entries[0]);
 				show.name = entries[1];
-				// show.date = entries[2];
 				{
 					let dateComponents = entries[2].split("-");
 					show.date = new Date();
@@ -190,6 +189,7 @@ app.updateClient = function(delta) {
 		ui.pixiFields = [];
 		ui.pixiInputFields = [];
 		ui.pixiSprites = [];
+		ui.dateTimePickers = [];
 
 		ui.prevScreen = ui.currentScreen;
 		ui.screenTime = 0;
@@ -205,7 +205,7 @@ app.updateClient = function(delta) {
 
 	function placeAtTop(sprite) {
 		sprite.x = ui.size.x/2 - sprite.width/2;
-		sprite.y = ui.size.y*0.3 - sprite.height/2;
+		sprite.y = ui.size.y*0.15;
 	}
 
 	function placeAtTopLeft(sprite) {
@@ -215,7 +215,7 @@ app.updateClient = function(delta) {
 
 	function placeAtBottom(sprite) {
 		sprite.x = ui.size.x/2 - sprite.width/2;
-		sprite.y = ui.size.y - sprite.height/2 - ui.size.y*0.3;
+		sprite.y = ui.size.y - sprite.height/2 - ui.size.y*0.05;
 	}
 
 	function placeUnder(below, above) {
@@ -291,7 +291,7 @@ app.updateClient = function(delta) {
 		if (onFirstFrame) {
 			ui.userNameField = createInputTextField("Username", 50);
 			ui.passwordField = createInputTextField("Password", 32);
-			ui.dobField = createInputTextField("Dob", 32);
+			ui.dobPicker = createDatePicker("Dob");
 			ui.phoneField = createInputTextField("Phone number", 16);
 			ui.addressField = createInputTextField("Address", 64);
 			ui.emailField = createInputTextField("Email", 64);
@@ -300,8 +300,8 @@ app.updateClient = function(delta) {
 
 		placeAtTop(ui.userNameField);
 		placeUnder(ui.passwordField, ui.userNameField);
-		placeUnder(ui.dobField, ui.passwordField);
-		placeUnder(ui.phoneField, ui.dobField);
+		placeUnder(ui.dobPicker, ui.passwordField);
+		placeUnder(ui.phoneField, ui.dobPicker);
 		placeUnder(ui.addressField, ui.phoneField);
 		placeUnder(ui.emailField, ui.addressField);
 
@@ -310,7 +310,7 @@ app.updateClient = function(delta) {
 			let url = "includes/newUserInsert.inc.php?";
 			url += "Username="+ui.userNameField.text + "&";
 			url += "Password="+ui.passwordField.text + "&";
-			url += "Dob="+ui.dobField.text + "&";
+			url += "Dob="+ui.dobPicker.text + "&";
 			url += "Phone="+ui.phoneField.text + "&";
 			url += "Address="+ui.addressField.text + "&";
 			url += "Email="+ui.emailField.text;
@@ -320,6 +320,7 @@ app.updateClient = function(delta) {
 			});
 		}
 
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_LOGIN);
 	} else if (ui.currentScreen == SCREEN_WAITING_FOR_SERVER) {
 		//@stp Time out on this screen
 		if (onFirstFrame) {
@@ -526,8 +527,7 @@ app.updateClient = function(delta) {
 			ui.nameField = createInputTextField("Name on card", 64);
 			ui.creditNumber = createInputTextField("Credit Card Number", 32);
 			ui.cvvField = createInputTextField("CVV", 4);
-			ui.dateField = createInputTextField("Date", 32);
-			// todo exp date picker
+			ui.dateField = createDatePicker("Exp");
 
 			ui.zipField = createInputTextField("Zip", 16);
 
@@ -587,11 +587,11 @@ app.updateClient = function(delta) {
 			ui.showNameField = createInputTextField("Show name", 250);
 			ui.showNameField.text = show.name;
 
-			ui.showDateField = createInputTextField("Show date", 32);
-			ui.showDateField.text = show.date.getFullYear() + "-" + show.date.getMonth() + "-" + show.date.getDate();
+			ui.showDateField = createDatePicker("Show date");
+			ui.showDateField.values = [show.date.getMonth(), show.date.getDate(), show.date.getFullYear()];
 
-			ui.showTimeField = createInputTextField("Show time", 32);
-			ui.showTimeField.text = show.date.getHours() + ":" + show.date.getMinutes() + ":" + show.date.getSeconds(); //@todo Don't specify seconds
+			ui.showTimeField = createTimePicker("Show time");
+			ui.showTimeField.values = [show.date.getHours(), show.date.getMinutes()];
 
 			ui.saveButton = createTextButtonSprite("Save");
 		}
@@ -604,7 +604,7 @@ app.updateClient = function(delta) {
 		ui.saveButton.y = ui.size.y - ui.saveButton.height - ui.size.y*0.05;
 		if (spriteClicked(ui.saveButton)) {
 			let show = showManager.shows[showManager.currentShowIndex];
-			let url = "includes/editShow.php?ShowID="+show.id+"&ShowName="+ui.showNameField.text+"&ShowDate="+ui.showDateField+"&ShowTime="+ui.showTimeField;
+			let url = "includes/editShow.php?ShowID="+show.id+"&ShowName="+ui.showNameField.text+"&ShowDate="+ui.showDateField.text+"&ShowTime="+ui.showTimeField.text;
 			makeRequest(url, function(responseText) {
 				showPopup("The show was successfully updated!");
 				changeScreen(SCREEN_SHOW_LIST);
@@ -632,7 +632,7 @@ app.updateClient = function(delta) {
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	}
 
-	for (let i = 0; i < ui.pixiInputFields.length; i++) {
+	for (let i = 0; i < ui.pixiInputFields.length; i++) { // Update input fields
 		let field = ui.pixiInputFields[i];
 		if (screenSizeChanged || ui.screenTime == 0) {
 			if (isPortraitMode) {
@@ -641,6 +641,114 @@ app.updateClient = function(delta) {
 				field.setInputStyle("width", ui.size.x*0.2+"px");
 			}
 		}
+	}
+
+	for (let i = 0; i < ui.dateTimePickers.length; i++) { // Update dateTime pickers
+		let picker = ui.dateTimePickers[i];
+
+		if (!picker.container) {
+			picker.container = new PIXI.Container();
+			ui.stageSprite.addChild(picker.container);
+			ui.pixiSprites.push(picker.container);
+
+			picker.labelField = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
+			picker.labelField.style.fill = 0x909090;
+			picker.container.addChild(picker.labelField);
+
+			picker.tickers = [];
+			for (let i = 0; i < picker.values.length; i++) {
+				let ticker = {};
+				ticker.container = new PIXI.Container();
+				picker.container.addChild(ticker.container);
+
+				ticker.upButton = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
+				ticker.container.addChild(ticker.upButton);
+
+				ticker.field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
+				ticker.field.style.fill = 0x909090;
+				ticker.container.addChild(ticker.field);
+
+				ticker.downButton = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
+				ticker.container.addChild(ticker.downButton);
+
+				ticker.upArrow = new PIXI.Sprite.from("assets/triangle.png");
+				ticker.upButton.addChild(ticker.upArrow);
+
+				ticker.downArrow = new PIXI.Sprite.from("assets/triangle.png");
+				ticker.downButton.addChild(ticker.downArrow);
+
+				picker.tickers.push(ticker);
+			}
+		}
+
+		let buttonWidth = ui.size.x * 0.05;
+		let buttonHeight = ui.size.x * 0.02;
+		if (isPortraitMode) {
+			buttonWidth = ui.size.x * 0.20;
+			buttonHeight = ui.size.x * 0.10;
+		}
+
+		let xPos = 0;
+		for (let i = 0; i < picker.tickers.length; i++) {
+			let ticker = picker.tickers[i];
+			let tickAmount = 1;
+			if (picker.dateTimeMode == "time" && i == 1) tickAmount = 5;
+
+			ticker.upButton.width = buttonWidth;
+			ticker.upButton.height = buttonHeight;
+			if (spriteClicked(ticker.upButton)) picker.values[i] += tickAmount;
+			ticker.upArrow.tint = 0x707070;
+			ticker.upArrow.width = ticker.upArrow.height = ticker.upButton.height*0.8;
+			ticker.upArrow.x = ticker.upButton.width/2 - ticker.upArrow.width/2;
+
+			ticker.field.x = ticker.upButton.x + ticker.upButton.width/2 - ticker.field.width/2;
+			ticker.field.y = ticker.upButton.y + ticker.upButton.height;
+			ticker.field.text = picker.values[i];
+
+			ticker.downButton.width = buttonWidth;
+			ticker.downButton.height = buttonHeight;
+			ticker.downButton.y = ticker.field.y + ticker.field.height;
+			if (spriteClicked(ticker.downButton)) picker.values[i] -= tickAmount;
+			ticker.downArrow.tint = 0x707070;
+			ticker.downArrow.width = ticker.downArrow.height = ticker.downButton.height*0.8;
+			ticker.downArrow.anchor.set(0.5);
+			ticker.downArrow.x = ticker.downButton.width/2;
+			ticker.downArrow.y = ticker.downButton.height/2;
+			ticker.downArrow.rotation = Math.PI;
+
+			if (picker.dateTimeMode == "date") {
+				if (i == 0) picker.values[i] = wrap(picker.values[i], 1, 12);
+				if (i == 1) picker.values[i] = wrap(picker.values[i], 1, 31);
+				if (i == 2) picker.values[i] = wrap(picker.values[i], 1970, 3000);
+			} else {
+				if (i == 0) picker.values[i] = wrap(picker.values[i], 0, 23);
+				if (i == 1) picker.values[i] = wrap(picker.values[i], 0, 59);
+			}
+
+			ticker.container.x = xPos;
+			ticker.container.y = picker.labelField.y + picker.labelField.height;
+			xPos += ticker.container.width + ui.size.x*0.005;
+		}
+
+		picker.labelField.text = picker.labelText;
+
+		if (picker.dateTimeMode == "date") {
+			picker.text = "";
+			picker.text += picker.values[2] + "-";
+			picker.text += picker.values[0] + "-";
+			picker.text += picker.values[1] + "";
+		} else {
+			picker.text = "";
+			picker.text += picker.values[0] + ":";
+			picker.text += picker.values[1] + ":";
+			picker.text += "00";
+		}
+
+		// Sync stuff
+		picker.container.x = picker.x;
+		picker.container.y = picker.y;
+		picker.width = picker.container.width;
+		picker.height = picker.container.height;
 	}
 
 	if (ui.popup != null) { // Update popup
@@ -729,7 +837,8 @@ function spriteClicked(sprite) {
 	if (!sprite.visible) return false;
 
 	let hoveringButton = false;
-	if (ui.mouse.x > sprite.x && ui.mouse.x < sprite.x + sprite.width && ui.mouse.y > sprite.y && ui.mouse.y < sprite.y + sprite.height) {
+	let rect = sprite.getBounds();
+	if (ui.mouse.x > rect.x && ui.mouse.x < rect.x + rect.width && ui.mouse.y > rect.y && ui.mouse.y < rect.y + rect.height) {
 		hoveringButton = true;
 	}
 
@@ -738,6 +847,24 @@ function spriteClicked(sprite) {
 		return true;
 	}
 	return false;
+}
+
+function createDatePicker(label) {
+	let picker = {x: 0, y: 0, width: 0, height: 0};
+	picker.labelText = label;
+	picker.dateTimeMode = "date";
+	picker.values = [0, 0, 0];
+	ui.dateTimePickers.push(picker);
+	return picker;
+}
+
+function createTimePicker(label) {
+	let picker = {x: 0, y: 0, width: 0, height: 0};
+	picker.labelText = label;
+	picker.dateTimeMode = "time";
+	picker.values = [0, 0];
+	ui.dateTimePickers.push(picker);
+	return picker;
 }
 
 function makeRequest(url, onSuccess) {
@@ -750,6 +877,8 @@ function makeRequest(url, onSuccess) {
 				changeScreen(SCREEN_LOGIN);
 			} else if (this.status == 200) {
 				if (this.responseText.startsWith("Error:")) {
+					console.log("Url: "+url);
+					console.log("Response: "+this.responseText);
 					showPopup(this.responseText);
 					app.userId = 0;
 					changeScreen(SCREEN_LOGIN);
@@ -945,6 +1074,12 @@ function clampMap(value, sourceMin, sourceMax, destMin, destMax, ease) {
 	perc = clamp(perc, 0, 1);
 	perc = tweenEase(perc, ease);
 	return lerp(destMin, destMax, perc);
+}
+
+function wrap(x, min, max) {
+	if (x < min) x = max;
+	if (x > max) x = min;
+	return x;
 }
 
 let LINEAR = 0;
