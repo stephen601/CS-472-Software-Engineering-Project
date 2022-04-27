@@ -11,7 +11,6 @@
 //@todo Do transitions
 //@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
-//@todo Do input text field hints
 
 let verboseLogging = false;
 let defaultFontSize = 40;
@@ -692,6 +691,7 @@ function createInputTextField(hintText) {
 			disabled: {fill: 0xDBDBDB, rounded: 16}
 		}
 	});
+	field.placeholder = hintText;
 	field.x = 100;
 	field.y = 100;
 	ui.stageSprite.addChild(field);
