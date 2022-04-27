@@ -2,7 +2,7 @@
 // Seat price editor (client/server)
 // Reports (client/server)
 //@todo Prevent two people from buying the same seat
-//@todo Add back buttons
+//@todo Add show
 //
 //@todo limit data sending string size for server
 //@todo Fix receipt screen since now we have tickets from multiple shows
@@ -234,6 +234,14 @@ app.updateClient = function(delta) {
 		sprite.y = ui.size.y - sprite.height - ui.size.y*0.05;
 	}
 
+	function simulateBackButton(onFirstFrame, elapsed, prevScreen) {
+		if (onFirstFrame) ui.backButton = createTextButtonSprite("Back");
+		placeAtTopLeft(ui.backButton);
+		if (spriteClicked(ui.backButton)) {
+			changeScreen(prevScreen);
+		}
+	}
+
 	if (ui.currentScreen == SCREEN_NONE) {
 	} else if (ui.currentScreen == SCREEN_LOGIN) {
 		//@stp Failed to login in general
@@ -462,12 +470,7 @@ app.updateClient = function(delta) {
 			changeScreen(SCREEN_SHOW_EDITOR);
 		}
 
-		if (onFirstFrame) ui.backButton = createTextButtonSprite("Back");
-		placeAtTopLeft(ui.backButton);
-		if (spriteClicked(ui.backButton)) {
-			changeScreen(SCREEN_SHOW_LIST);
-		}
-
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	} else if (ui.currentScreen == SCREEN_CART) {
 		//@stp There could be too many items to display
 		//@stp You could buy with nothing in your cart
@@ -482,7 +485,6 @@ app.updateClient = function(delta) {
 				entry.removeSprite.tint = 0xA00000;
 			}
 
-			ui.backButton = createTextButtonSprite("Browse more shows");
 			ui.buyButton = createTextButtonSprite("Buy");
 		}
 
@@ -508,18 +510,13 @@ app.updateClient = function(delta) {
 			yPos += sprite.height + ui.size.y*0.02;
 		}
 
-		ui.backButton.x = ui.size.x*0.4 - ui.backButton.width/2;
-		ui.backButton.y = ui.size.y - ui.backButton.height - ui.size.y*0.15;
-		if (spriteClicked(ui.backButton)) {
-			changeScreen(SCREEN_SHOW_LIST);
-		}
-
 		ui.buyButton.x = ui.size.x*0.7 - ui.buyButton.width/2;
 		ui.buyButton.y = ui.size.y - ui.buyButton.height - ui.size.y*0.15;
 		if (spriteClicked(ui.buyButton)) {
 			changeScreen(SCREEN_PAYMENT_INFO);
 		}
 
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	} else if (ui.currentScreen == SCREEN_PAYMENT_INFO) {
 		//@stp Check if card is expired
 		//@stp Check if number and name are valid
@@ -549,6 +546,8 @@ app.updateClient = function(delta) {
 		if (spriteClicked(ui.buyButton)) {
 			chargeCreditCard(ui.nameField.text, ui.creditNumber.text, ui.dateField.text, 0); //@todo Figure out the price // The server probably has to do this
 		}
+
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_CART);
 	} else if (ui.currentScreen == SCREEN_RECEIPT) {
 		//@stp There could be too many items to display
 		//@stp Syncing show details if they changed
@@ -569,8 +568,6 @@ app.updateClient = function(delta) {
 				ui.seatsField.text = convertSeatIndexToString(seatIndex);
 				if (i < showManager.currentSeatIndices.length-1) ui.seatsField.text += ", ";
 			}
-
-			ui.doneButton = createTextButtonSprite("Done");
 		}
 
 		let downPad = ui.size.y*0.02;
@@ -583,12 +580,7 @@ app.updateClient = function(delta) {
 		ui.seatsField.x = ui.size.x / 2 - ui.seatsField.width / 2;
 		ui.seatsField.y = ui.showDateField.y + ui.showDateField.height + downPad;
 
-		ui.doneButton.x = ui.size.x * 0.5 - ui.doneButton.width / 2;
-		ui.doneButton.y = ui.size.y*0.85 - ui.doneButton.height;
-
-		if (spriteClicked(ui.doneButton)) {
-			changeScreen(SCREEN_SHOW_LIST);
-		}
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	} else if (ui.currentScreen == SCREEN_SHOW_EDITOR) {
 		if (onFirstFrame) {
 			let show = showManager.shows[showManager.currentShowIndex];
@@ -619,6 +611,8 @@ app.updateClient = function(delta) {
 				changeScreen(SCREEN_SHOW_LIST);
 			});
 		}
+
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
 		//@todo Delete show
 		//@server editShow.php?showId=3&showName=MyShowName&showDate=3248092347
 		// 1
@@ -627,6 +621,7 @@ app.updateClient = function(delta) {
 		if (onFirstFrame) {
 
 		}
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
 		//@server editSeats.php?showId=3&seats=2,52,26,12&price=5
 		// 1
 	} else if (ui.currentScreen == SCREEN_REPORT) {
@@ -634,6 +629,8 @@ app.updateClient = function(delta) {
 		if (onFirstFrame) {
 			//@server getAllReceipts.php
 		}
+
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	}
 
 	{ /// Update input field
