@@ -4,7 +4,6 @@
 //@todo Prevent two people from buying the same seat
 //@todo Add show
 //
-//@todo Remove children automatically
 //@todo reload shows between screens
 //@todo Fix receipt screen since now we have tickets from multiple shows
 //@todo Figure out the report screen in general
@@ -41,9 +40,7 @@ ui.mouseJustDown = false;
 ui.mouseJustUp = false;
 ui.prevSize = {x: 0, y: 0};
 ui.size = {x: 0, y: 0};
-ui.pixiFields = [];
 ui.pixiInputFields = [];
-ui.pixiSprites = [];
 ui.dateTimePickers = [];
 
 ui.prevScreen = -1;
@@ -183,12 +180,13 @@ app.updateClient = function(delta) {
 
 	let onFirstFrame = false;
 	if (ui.prevScreen != ui.currentScreen) {
-		for (let i = 0; i < ui.pixiFields.length; i++) ui.stageSprite.removeChild(ui.pixiFields[i]);
-		for (let i = 0; i < ui.pixiInputFields.length; i++) ui.stageSprite.removeChild(ui.pixiInputFields[i]);
-		for (let i = 0; i < ui.pixiSprites.length; i++) ui.stageSprite.removeChild(ui.pixiSprites[i]);
-		ui.pixiFields = [];
+		function removeAllChildren(sprite, startingAt) {
+			while (sprite.children.length > startingAt) {
+				sprite.removeChild(sprite.children[startingAt]);
+			}
+		}
+		removeAllChildren(ui.stageSprite, 1);
 		ui.pixiInputFields = [];
-		ui.pixiSprites = [];
 		ui.dateTimePickers = [];
 
 		ui.prevScreen = ui.currentScreen;
@@ -649,7 +647,6 @@ app.updateClient = function(delta) {
 		if (!picker.container) {
 			picker.container = new PIXI.Container();
 			ui.stageSprite.addChild(picker.container);
-			ui.pixiSprites.push(picker.container);
 
 			picker.labelField = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 			picker.labelField.style.fill = 0x909090;
@@ -779,7 +776,6 @@ function changeScreen(newScreen) {
 function createTextField() {
 	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
 	ui.stageSprite.addChild(field);
-	ui.pixiFields.push(field);
 	return field;
 }
 
@@ -822,14 +818,12 @@ function createTextButtonSprite(text) {
 	sprite.addChild(field);
 
 	ui.stageSprite.addChild(sprite);
-	ui.pixiSprites.push(sprite);
 	return sprite;
 }
 
 function createSeatSprite() {
 	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
 	ui.stageSprite.addChild(sprite);
-	ui.pixiSprites.push(sprite);
 	return sprite;
 }
 
