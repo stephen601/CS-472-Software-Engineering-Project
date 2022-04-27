@@ -67,7 +67,6 @@ let THEATER_COLS = 12;
 
 function runClient() {
 	let pixiApp = new PIXI.Application({
-		resizeTo: window,
 		backgroundColor: 0xFF262626
 	});
 
@@ -167,8 +166,22 @@ function runClient() {
 app.updateClient = function(delta) {
 	let elapsed = 1/60;
 
-	ui.size.x = app.pixiApp.screen.width;
-	ui.size.y = app.pixiApp.screen.height;
+	let newSize = {x: window.innerWidth, y: window.innerHeight};
+	let allowResize = true;
+	if (newSize.x == ui.size.x && newSize.y < ui.size.y - 200) allowResize = false;
+
+	if (allowResize) {
+		ui.size.x = window.innerWidth;
+		ui.size.y = window.innerHeight;
+	}
+
+	let screenSizeChanged = false;
+	if (ui.prevSize.x != ui.size.x || ui.prevSize.y != ui.size.y) {
+		ui.prevSize.x = ui.size.x;
+		ui.prevSize.y = ui.size.y;
+		app.pixiApp.renderer.resize(ui.size.x, ui.size.y);
+		screenSizeChanged = true;
+	}
 
 	let onFirstFrame = false;
 	if (ui.prevScreen != ui.currentScreen) {
@@ -182,13 +195,6 @@ app.updateClient = function(delta) {
 		ui.prevScreen = ui.currentScreen;
 		ui.screenTime = 0;
 		onFirstFrame = true;
-	}
-
-	let screenSizeChanged = false;
-	if (ui.prevSize.x != ui.size.x || ui.prevSize.y != ui.size.y) {
-		ui.prevSize.x = ui.size.x;
-		ui.prevSize.y = ui.size.y;
-		screenSizeChanged = true;
 	}
 
 	let isPortraitMode = false;
@@ -639,7 +645,7 @@ app.updateClient = function(delta) {
 		}
 	}
 
-	if (ui.popup != null) { /// Update popup
+	if (ui.popup != null) { // Update popup
 		ui.popupTime += elapsed;
 
 		let maxTime = 2;
