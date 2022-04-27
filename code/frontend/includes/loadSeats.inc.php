@@ -3,7 +3,7 @@
 include 'connection.inc.php';
 $ShowID=$_GET['ShowID'];
 
-$sql="SELECT UserID, SeatPrice FROM Seats WHERE ShowID = $ShowID ORDER BY SeatID ASC";
+$sql="SELECT UserID, SeatPrice FROM seats WHERE ShowID = $ShowID ORDER BY SeatID ASC";
 $result = $conn->query($sql);
 
 if ($result->num_rows > 0) {

@@ -12,7 +12,7 @@ class Shows{
 
 	public function setShow(){
 		$conn=require'connection.inc.php';
-		$sql="INSERT INTO `Event` (`ShowID`, `ShowName`, `ShowDate`, `ShowTime`,`ShowPrice`) VALUES ($this->Null, '$this->ShowName', '$this->ShowDate', '$this->ShowTime', '$this->ShowPrice')";
+		$sql="INSERT INTO `event` (`ShowID`, `ShowName`, `ShowDate`, `ShowTime`,`ShowPrice`) VALUES ($this->Null, '$this->ShowName', '$this->ShowDate', '$this->ShowTime', '$this->ShowPrice')";
 		if (mysqli_query($conn, $sql)) {
 			echo "New record created successfully !\n";
 
@@ -43,10 +43,10 @@ class Shows{
 	}
 	public function deleteShow(){
 		$conn=require'connection.inc.php';
-		$getID="SELECT * FROM `Event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` = '$this->ShowDate' AND `ShowTime` = '$this->ShowTime'";
+		$getID="SELECT * FROM `event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` = '$this->ShowDate' AND `ShowTime` = '$this->ShowTime'";
 		$results=mysqli_query($conn, $getID);
 		$row=mysqli_fetch_assoc($results);
-		$sql="DELETE FROM `Event` WHERE `Event`.`ShowID`=$row[ShowID];";
+		$sql="DELETE FROM `event` WHERE `event`.`ShowID`=$row[ShowID];";
 		if (mysqli_query($conn, $sql)) {
 			echo "Record deleted successfully !";
 		} else {
@@ -55,7 +55,7 @@ class Shows{
 	}
 	public function newDeleteShow($ShowID){
 		$conn=require'connection.inc.php';
-		$sql="DELETE FROM `Event` WHERE `Event`.`ShowID`=$ShowID;";
+		$sql="DELETE FROM `event` WHERE `event`.`ShowID`=$ShowID;";
 		if (mysqli_query($conn, $sql)) {
 			echo "Record deleted successfully !";
 
@@ -68,7 +68,7 @@ class Shows{
 	}
 	public function checkShow(){
 		$conn=require'connection.inc.php';
-		$sql = "SELECT * FROM `Event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` = '$this->ShowDate' AND `ShowTime` = '$this->ShowTime'";
+		$sql = "SELECT * FROM `event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` = '$this->ShowDate' AND `ShowTime` = '$this->ShowTime'";
 		$result=mysqli_query($conn, $sql);
 		$row=mysqli_fetch_assoc($result);
 
@@ -80,7 +80,7 @@ class Shows{
 	} 
 	public function getShow(){
 		$conn=require'connection.inc.php';
-		$sql = "SELECT * FROM `Event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` = '$this->ShowDate' AND `ShowTime` = '$this->ShowTime'";
+		$sql = "SELECT * FROM `event` WHERE `ShowName` LIKE '$this->ShowName' AND `ShowDate` = '$this->ShowDate' AND `ShowTime` = '$this->ShowTime'";
 		$result = mysqli_query($conn, $sql);
 		//var_dump($sql);
 		$error_msg= ' Username does not exist.';
@@ -110,7 +110,7 @@ class Shows{
 	}
 	public function getShows() {
 		$conn=require'connection.inc.php';
-		$sql = "SELECT * FROM `Event` WHERE `ShowDate` >= '$this->ShowDateMin' AND `ShowDate` <= '$this->ShowDateMax'";
+		$sql = "SELECT * FROM `event` WHERE `ShowDate` >= '$this->ShowDateMin' AND `ShowDate` <= '$this->ShowDateMax'";
 		$result = mysqli_query($conn, $sql);
 		$resultCheck=mysqli_num_rows($result);
 		if ($resultCheck > 0) {

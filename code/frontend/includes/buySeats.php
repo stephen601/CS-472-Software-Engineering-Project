@@ -13,7 +13,7 @@ if ($simulateNoMoney) {
 	for ($i = 0; $i < count($stringArray); $i+=2) {
 		$ShowID = intval($stringArray[$i]);
 		$SeatID = intval($stringArray[$i+1]);
-		$sql = "UPDATE Seats SET UserID=$UserID WHERE ShowID = $ShowID AND SeatID = $SeatID" ;
+		$sql = "UPDATE seats SET UserID=$UserID WHERE ShowID = $ShowID AND SeatID = $SeatID" ;
 
 		if (!$conn->query($sql)) {
 			echo "Error: Failed to update seat ". $SeatID . " for show " . $ShowID;
@@ -22,7 +22,7 @@ if ($simulateNoMoney) {
 	}
 
 	$dt = date('Y-m-d H:i:s');
-	$sql = "INSERT INTO Receipt (UserID, Purchase, FinalPrice, DateTime) VALUES ('$UserID', '$purchaseStr', 0, '$dt')";
+	$sql = "INSERT INTO receipt (UserID, Purchase, FinalPrice, DateTime) VALUES ('$UserID', '$purchaseStr', 0, '$dt')";
 	if (!$conn->query($sql)) {
 		echo "Error: " . mysqli_error($conn);
 	}
