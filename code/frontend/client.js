@@ -293,12 +293,10 @@ app.updateClient = function(delta) {
 
 		if (spriteClicked(ui.loginButton)) {
 			attemptLogin(ui.userField.text, ui.passField.text);
-			changeScreen(SCREEN_WAITING_FOR_SERVER);
 		}
 
 		if (spriteClicked(ui.instantLogin)) {
 			attemptLogin("Jeru", "testPass");
-			changeScreen(SCREEN_WAITING_FOR_SERVER);
 		}
 
 		if (spriteClicked(ui.debugButton)) {
@@ -407,11 +405,6 @@ app.updateClient = function(delta) {
 			if (spriteClicked(button)) {
 				selectShow(i);
 				changeScreen(SCREEN_SEAT_LIST);
-				//@server getSeats.php?showId=3
-				//SeatAvailable0, SeatPrice0
-				//SeatAvailable1, SeatPrice1
-				//...
-				//SeatAvailable95, SeatPrice95
 			}
 		}
 	} else if (ui.currentScreen == SCREEN_SEAT_LIST) {
@@ -437,14 +430,14 @@ app.updateClient = function(delta) {
 		let totalWidth;
 		let totalHeight;
 		for (let i = 0; i < 999; i++) {
-			seatWidth *= 0.9;
-			seatHeight *= 0.9;
+			seatWidth *= 0.95;
+			seatHeight *= 0.95;
 			totalWidth = (THEATER_COLS * (seatWidth+pad));
 			totalHeight = (THEATER_ROWS * (seatHeight+pad));
 			pad = seatWidth * 0.156;
 
 			if (
-				totalWidth <= ui.size.x*0.8 &&
+				totalWidth <= ui.size.x*0.95 &&
 				totalHeight <= ui.size.y*0.8
 			) break;
 		}
@@ -748,7 +741,7 @@ app.updateClient = function(delta) {
 			if (picker.dateTimeMode == "date") {
 				if (i == 0) picker.values[i] = wrap(picker.values[i], 1, 12);
 				if (i == 1) picker.values[i] = wrap(picker.values[i], 1, 31);
-				if (i == 2) picker.values[i] = wrap(picker.values[i], 1970, 3000);
+				if (i == 2) picker.values[i] = wrap(picker.values[i], 1970, 3000); // eol lol
 			} else {
 				if (i == 0) picker.values[i] = wrap(picker.values[i], 0, 23);
 				if (i == 1) picker.values[i] = wrap(picker.values[i], 0, 59);
