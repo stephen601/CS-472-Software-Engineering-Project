@@ -922,8 +922,13 @@ function makeRequest(url, onSuccess) {
 			}
 		}
 	}
-	//xmlhttp.open("GET", "login.html", true);
-	//@stp xmlhttp.onerror and this.status
+	xmlhttp.onerror = function() {
+		console.log("xmlhttp.onerror");
+		console.log("Url: "+url);
+		showPopup("Server failure");
+		app.userId = 0;
+		changeScreen(SCREEN_LOGIN);
+	}
 	xmlhttp.open("GET", url, true);
 	xmlhttp.send();
 }
