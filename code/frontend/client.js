@@ -1,9 +1,10 @@
 //@todo Make Seat price editor in the client
 //@todo Prevent two people from buying the same seat
-//@todo Add show
 //@todo Make reports better
+//@todo Show seat prices
+//@todo Show prices in general
+//@todo Fix time stepper interval
 //
-//@todo reload shows between screens
 //@todo Fix receipt screen since now we have tickets from multiple shows
 //@todo Do seat editor
 //@todo Do background for plain text fields
@@ -118,45 +119,6 @@ function runClient() {
 		ui.mouseDown = false;
 	});
 
-	function getShowsFromServer() {
-
-		function parseShowData(data) {
-			showManager.shows = [];
-
-			let showLines = data.split("<br />");
-			for (let i = 0; i < showLines.length; i++) {
-				let line = showLines[i];
-				if (line.length < 2) continue;
-				let entries = line.split("|");
-
-				let show = {};
-				show.id = parseInt(entries[0]);
-				show.name = entries[1];
-				{
-					let dateComponents = entries[2].split("-");
-					show.date = new Date();
-					show.date.setFullYear(parseInt(dateComponents[0]));
-					show.date.setMonth(parseInt(dateComponents[1]));
-					show.date.setDate(parseInt(dateComponents[2]));
-
-					let timeComponents = entries[3].split(":");
-					show.date.setHours(parseInt(timeComponents[0]), parseInt(timeComponents[1]), parseInt(timeComponents[2]));
-				}
-				showManager.shows.push(show);
-			}
-			/*
-			27|test|2022-04-15|22:32:26|5<br />28|test|2022-04-16|21:32:26|5<br />29|test|2022-04-17|15:32:26|5<br />
-			*/
-		}
-
-		let date = new Date();
-		let minDateStr = date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate();
-		let maxDateStr = (date.getFullYear()+5) + "-" + date.getMonth() + "-" + date.getDate();
-		let url = "includes/getShowReport.inc.php?showdatemin="+minDateStr+"&showdatemax="+maxDateStr;
-		makeRequest(url, parseShowData);
-	}
-
-	getShowsFromServer();
 	generateUml();
 
 	changeScreen(SCREEN_LOGIN);
@@ -244,7 +206,7 @@ app.updateClient = function(delta) {
 
 	function placeAtBottom(sprite) {
 		sprite.x = ui.size.x/2 - sprite.width/2;
-		sprite.y = ui.size.y - sprite.height/2 - ui.size.y*0.05;
+		sprite.y = ui.size.y - sprite.height - ui.size.y*0.05;
 	}
 
 	function placeUnder(below, above) {
@@ -263,6 +225,12 @@ app.updateClient = function(delta) {
 		sprite.y = ui.size.y - sprite.height - ui.size.y*0.05;
 	}
 
+	function placeAtBottomRight(sprite) {
+		sprite.x = ui.size.x - sprite.width - ui.size.x*0.05;
+		sprite.y = ui.size.y - sprite.height - ui.size.y*0.05;
+	}
+
+
 	function simulateBackButton(onFirstFrame, elapsed, prevScreen) {
 		if (onFirstFrame) ui.backButton = createTextButtonSprite("Back");
 		placeAtTopLeft(ui.backButton);
@@ -273,9 +241,7 @@ app.updateClient = function(delta) {
 
 	if (ui.currentScreen == SCREEN_NONE) {
 	} else if (ui.currentScreen == SCREEN_LOGIN) {
-		//@stp Failed to login in general
 		if (onFirstFrame) {
-			//@server user creation
 			ui.userField = createInputTextField("username", 50);
 			ui.passField = createInputTextField("password", 32);
 			ui.loginButton = createTextButtonSprite("Login");
@@ -358,14 +324,13 @@ app.updateClient = function(delta) {
 
 		placeAtCenter(ui.waitingText);
 	} else if (ui.currentScreen == SCREEN_SHOW_LIST) {
-		//@todo Update the shows locally
 		if (onFirstFrame) {
 			ui.showButtons = [];
 
 			for (let i = 0; i < showManager.shows.length; i++) {
 				let show = showManager.shows[i];
 				let buttonLabel = show.name + " at:";
-				buttonLabel += show.date.getMonth() + "-";
+				buttonLabel += (show.date.getMonth()+1) + "-";
 				buttonLabel += show.date.getDate() + "-";
 				buttonLabel += show.date.getFullYear() + " ";
 				buttonLabel += show.date.getHours() + ":";
@@ -375,18 +340,25 @@ app.updateClient = function(delta) {
 				ui.showButtons.push(sprite);
 			}
 
-			ui.addButton = createTextButtonSprite("Add show");
+			ui.addShowButton = createTextButtonSprite("Add show");
 			ui.cartButton = createTextButtonSprite("Cart");
 		}
 
-		ui.addButton.visible = app.isAdmin;
-		ui.addButton.x = ui.size.x*0.8 - ui.addButton.width/2;
-		ui.addButton.y = ui.size.y*0.9 - ui.addButton.height;
-		if (spriteClicked(ui.addButton)) { // if the button add show is clicked then.. 
-			//@server addShow.php
-			//ShowID
-			console.log("add");//***Need solution to add show
-			//@todo Go to the edit show screen
+		ui.addShowButton.visible = app.isAdmin;
+		ui.addShowButton.x = ui.size.x*0.8 - ui.addShowButton.width/2;
+		ui.addShowButton.y = ui.size.y*0.9 - ui.addShowButton.height;
+		if (spriteClicked(ui.addShowButton)) { // if the button add show is clicked then.. 
+			let date = new Date();
+			let dateStr = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate();
+			let timeStr = date.getHours() + ":00:00";
+			let url = "includes/newShowInsert.inc.php?showname=&showdate="+dateStr+"&showtime="+timeStr+"&showprice=0";
+			makeRequest(url, function(responseText) {
+				let showId = parseInt(responseText);
+				getShowsFromServer(function() {
+					selectShow(getShowIndex(getShowById(showId)));
+					changeScreen(SCREEN_SHOW_EDITOR);
+				});
+			});
 		}
 
 		ui.cartButton.x = ui.size.x*0.3 - ui.cartButton.width/2;
@@ -397,7 +369,7 @@ app.updateClient = function(delta) {
 
 		if (onFirstFrame) ui.reportButton = createTextButtonSprite("Get report");
 		ui.reportButton.visible = app.isAdmin;
-		placeUnder(ui.reportButton, ui.addButton);
+		placeUnder(ui.reportButton, ui.addShowButton);
 		if (spriteClicked(ui.reportButton)) {
 			changeScreen(SCREEN_REPORT);
 		}
@@ -620,12 +592,13 @@ app.updateClient = function(delta) {
 			ui.showNameField.text = show.name;
 
 			ui.showDateField = createDatePicker("Show date");
-			ui.showDateField.values = [show.date.getMonth(), show.date.getDate(), show.date.getFullYear()];
+			ui.showDateField.values = [show.date.getMonth()+1, show.date.getDate(), show.date.getFullYear()];
 
 			ui.showTimeField = createTimePicker("Show time");
-			ui.showTimeField.values = [show.date.getHours(), show.date.getMinutes()];
+			ui.showTimeField.values = [show.date.getHours()+1, show.date.getMinutes()];
 
 			ui.saveButton = createTextButtonSprite("Save");
+			ui.deleteButton = createTextButtonSprite("Delete");
 		}
 
 		placeAtTop(ui.showNameField);
@@ -643,10 +616,17 @@ app.updateClient = function(delta) {
 			});
 		}
 
+		placeAtBottomRight(ui.deleteButton);
+		if (spriteClicked(ui.deleteButton)) {
+			let show = showManager.shows[showManager.currentShowIndex];
+			let url = "includes/newDeleteShow.php?ShowID="+show.id;
+			console.log(url);
+			makeRequest(url, function(responseText) {
+				changeScreen(SCREEN_SHOW_LIST);
+			});
+		}
+
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
-		//@todo Delete show
-		//@server editShow.php?showId=3&showName=MyShowName&showDate=3248092347
-		// 1
 	} else if (ui.currentScreen == SCREEN_SEAT_EDITOR) {
 		//@stp @todo
 		if (onFirstFrame) {
@@ -810,13 +790,27 @@ app.updateClient = function(delta) {
 }
 
 function changeScreen(newScreen) {
-	ui.screenTransBackwards = false;
-	ui.currentScreen = newScreen;
+	if (newScreen == SCREEN_SHOW_LIST) {
+		getShowsFromServer(function() {
+			ui.screenTransBackwards = false;
+			ui.currentScreen = newScreen;
+		});
+	} else {
+		ui.screenTransBackwards = false;
+		ui.currentScreen = newScreen;
+	}
 }
 
 function changeScreenBackwards(newScreen) {
-	ui.screenTransBackwards = true;
-	ui.currentScreen = newScreen;
+	if (newScreen == SCREEN_SHOW_LIST) {
+		getShowsFromServer(function() {
+			ui.screenTransBackwards = true;
+			ui.currentScreen = newScreen;
+		});
+	} else {
+		ui.screenTransBackwards = true;
+		ui.currentScreen = newScreen;
+	}
 }
 
 function createTextField() {
@@ -935,9 +929,6 @@ function makeRequest(url, onSuccess) {
 }
 
 function attemptLogin(username, password) {
-	//@stp Test login case sensitivity
-	//False<br> Username does not exist.
-
 	function onComplete(responseText) {
 		console.log(responseText);
 		let stringArray = responseText.split("|");
@@ -945,26 +936,48 @@ function attemptLogin(username, password) {
 		app.isAdmin = parseInt(stringArray[1]);
 		showPopup("Welcome user "+app.userId);
 		changeScreen(SCREEN_SHOW_LIST);
-		// for (let i = 0; i < stringArray.length; i++) {
-
-		// }
-		// let prefix = responseText.substring(0, 4);
-		// if (prefix == "True") {
-		// 	let colonIndex = responseText.indexOf(":");
-		// 	if (colonIndex == -1) console.log("No colon?!"); //@stp
-		// 	let numberStr = responseText.substring(colonIndex+2);
-		// 	app.userId = parseInt(numberStr);
-		// 	showPopup("Welcome user "+app.userId);
-		// 	changeScreen(SCREEN_SHOW_LIST);
-		// } else if (prefix == "Fals") {
-		// 	showPopup("Wrong credientials");
-		// 	changeScreen(SCREEN_LOGIN);
-		// } else {
-		// 	console.log("Bad output: "+responseText);
-		// }
 	}
 
 	makeRequest("includes/login.inc.php?username="+username+"&password="+password, onComplete);
+}
+
+function getShowsFromServer(whenDone) {
+	function parseShowData(data) {
+		showManager.shows = [];
+
+		let showLines = data.split("<br />");
+		for (let i = 0; i < showLines.length; i++) {
+			let line = showLines[i];
+			if (line.length < 2) continue;
+			let entries = line.split("|");
+
+			let show = {};
+			show.id = parseInt(entries[0]);
+			show.name = entries[1];
+			{
+				let dateComponents = entries[2].split("-");
+				show.date = new Date();
+				show.date.setFullYear(parseInt(dateComponents[0]));
+				show.date.setMonth(parseInt(dateComponents[1])-1);
+				show.date.setDate(parseInt(dateComponents[2]));
+
+				let timeComponents = entries[3].split(":");
+				show.date.setHours(parseInt(timeComponents[0]), parseInt(timeComponents[1]), parseInt(timeComponents[2]));
+			}
+			showManager.shows.push(show);
+		}
+
+		if (whenDone != null) whenDone();
+		/*
+			27|test|2022-04-15|22:32:26|5<br />28|test|2022-04-16|21:32:26|5<br />29|test|2022-04-17|15:32:26|5<br />
+			*/
+	}
+
+	let date = new Date();
+	let minDateStr = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate();
+	let maxDateStr = (date.getFullYear()+5) + "-" + (date.getMonth()+1) + "-" + date.getDate();
+	let url = "includes/getShowReport.inc.php?showdatemin="+minDateStr+"&showdatemax="+maxDateStr;
+	makeRequest(url, parseShowData);
 }
 
 function selectShow(showIndex) {
@@ -1056,6 +1069,15 @@ function getShowById(id) {
 
 	showPopup("Couldn't find show with id "+id);
 	return null;
+}
+
+function getShowIndex(show) {
+	for (let i = 0; i < showManager.shows.length; i++) {
+		if (show == showManager.shows[i]) return i;
+	}
+
+	showPopup("Couldn't find show with id "+id);
+	return -1;
 }
 
 function convertSeatIndexToString(seatIndex) {

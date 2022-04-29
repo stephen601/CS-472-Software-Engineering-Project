@@ -11,10 +11,10 @@ class Shows{
 	public $ShowDateMax;
 
 	public function setShow(){
-		$conn=require'connection.inc.php';
+		$conn=require 'connection.inc.php';
 		$sql="INSERT INTO `event` (`ShowID`, `ShowName`, `ShowDate`, `ShowTime`,`ShowPrice`) VALUES ($this->Null, '$this->ShowName', '$this->ShowDate', '$this->ShowTime', '$this->ShowPrice')";
 		if (mysqli_query($conn, $sql)) {
-			echo "New record created successfully !\n";
+			echo $conn->insert_id;
 
 			// Insert the new seats
 			$sql = "INSERT INTO Seats ";
@@ -34,7 +34,7 @@ class Shows{
 				}
 			}
 			if (!mysqli_query($conn, $sql)) {
-				echo "Error: Failed to make seats";
+				echo "Error: Failed to make seats: " . $sql . " " . mysqli_error($conn);
 			}
 
 		} else {
