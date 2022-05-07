@@ -1,17 +1,21 @@
 //@todo Make Seat price editor in the client
 //@todo Prevent two people from buying the same seat
 //@todo Make reports better
-//@todo Show seat prices
-//@todo Show prices in general
 //@todo Fix time stepper interval
+//@todo Make debugMode toggles
+//@todo Make sure site works
+//@todo Figure out presentation
+//@todo Make it so you can't select red seats
 //
-//@todo Fix receipt screen since now we have tickets from multiple shows
-//@todo Do seat editor
 //@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
+//@todo Legend
 
 let verboseLogging = false;
-let defaultFontSize = 30;
+let defaultFontSize = 35;
+let titleFontSize = 60;
+let seatPriceFontSize = 20;
+let blueColor = 0xFF47C1F5;
 
 let SCREEN_NONE               = 0;
 let SCREEN_LOGIN              = 1;
@@ -194,6 +198,11 @@ app.updateClient = function(delta) {
 		}
 	}
 
+	function placeAtTitlePosition(sprite) {
+		sprite.x = ui.size.x/2 - sprite.width/2;
+		sprite.y = ui.size.y*0.01;
+	}
+
 	function placeAtTop(sprite) {
 		sprite.x = ui.size.x/2 - sprite.width/2;
 		sprite.y = ui.size.y*0.15;
@@ -242,18 +251,26 @@ app.updateClient = function(delta) {
 	if (ui.currentScreen == SCREEN_NONE) {
 	} else if (ui.currentScreen == SCREEN_LOGIN) {
 		if (onFirstFrame) {
-			ui.userField = createInputTextField("username", 50);
-			ui.passField = createInputTextField("password", 32);
+			getShowsFromServer();
+
+			ui.userField = createInputTextField("Username", 50);
+			ui.passField = createInputTextField("Password", 32);
 			ui.loginButton = createTextButtonSprite("Login");
 			ui.instantLogin = createTextButtonSprite("Instant login");
+			ui.instantReceipt = createTextButtonSprite("Instant receipt");
 			ui.debugButton = createTextButtonSprite("Debug code");
 			ui.createAccountButton = createTextButtonSprite("Create Account");
 		}
+
+		if (onFirstFrame) ui.title = createTitleText("Theatre Los Portales");
+		placeAtTitlePosition(ui.title);
+
 		placeAtTop(ui.userField);
 		placeUnder(ui.passField, ui.userField);
 		placeUnder(ui.loginButton, ui.passField);
 		placeUnder(ui.instantLogin, ui.loginButton);
-		placeUnder(ui.debugButton, ui.instantLogin);
+		placeUnder(ui.instantReceipt, ui.instantLogin);
+		placeUnder(ui.debugButton, ui.instantReceipt);
 
 		placeAtBottomLeft(ui.createAccountButton);
 
@@ -270,11 +287,22 @@ app.updateClient = function(delta) {
 			// let url = "includes/newDeleteShow.php?ShowID=31";
 			// let url = "includes/buySeats.php?UserID=22&str=32-1-32-2-32-3-33-4-33-5-33-6";
 			// let url = "includes/editShow.php?ShowID=32&ShowName=newName&ShowDate=2022-4-25&ShowTime=16:25:00";
-			let url = "includes/newUserInsert.inc.php?Username=Jeru&Password=testPass&Dob=1994-3-29&Phone=15552350&Address=123%20Place&Email=myName@site.com";
-			makeRequest(url, function(responseText) {
-				console.log("Url: "+url);
-				console.log(responseText);
-			});
+			// let url = "includes/newUserInsert.inc.php?Username=Jeru&Password=testPass&Dob=1994-3-29&Phone=15552350&Address=123%20Place&Email=myName@site.com";
+			// makeRequest(url, function(responseText) {
+			// 	console.log("Url: "+url);
+			// 	console.log(responseText);
+			// });
+		}
+
+		if (spriteClicked(ui.instantReceipt)) {
+			cart = [
+				{showId: 34, seatIndex: 1, price: 5}, 
+				{showId: 34, seatIndex: 13, price: 5}, 
+				{showId: 34, seatIndex: 25, price: 15}, 
+				{showId: 32, seatIndex: 22, price: 10}, 
+				{showId: 32, seatIndex: 10, price: 10}, 
+			];
+			changeScreen(SCREEN_RECEIPT);
 		}
 
 		if (spriteClicked(ui.createAccountButton)) {
@@ -291,6 +319,9 @@ app.updateClient = function(delta) {
 			ui.emailField = createInputTextField("Email", 64);
 			ui.createButton = createTextButtonSprite("Create");
 		}
+
+		if (onFirstFrame) ui.title = createTitleText("Create account");
+		placeAtTitlePosition(ui.title);
 
 		placeAtTop(ui.userNameField);
 		placeUnder(ui.passwordField, ui.userNameField);
@@ -344,6 +375,9 @@ app.updateClient = function(delta) {
 			ui.cartButton = createTextButtonSprite("Cart");
 		}
 
+		if (onFirstFrame) ui.title = createTitleText("Shows");
+		placeAtTitlePosition(ui.title);
+
 		ui.addShowButton.visible = app.isAdmin;
 		ui.addShowButton.x = ui.size.x*0.8 - ui.addShowButton.width/2;
 		ui.addShowButton.y = ui.size.y*0.9 - ui.addShowButton.height;
@@ -355,8 +389,9 @@ app.updateClient = function(delta) {
 			makeRequest(url, function(responseText) {
 				let showId = parseInt(responseText);
 				getShowsFromServer(function() {
-					selectShow(getShowIndex(getShowById(showId)));
-					changeScreen(SCREEN_SHOW_EDITOR);
+					selectShow(getShowIndex(getShowById(showId)), function() {
+						changeScreen(SCREEN_SHOW_EDITOR);
+					});
 				});
 			});
 		}
@@ -383,8 +418,9 @@ app.updateClient = function(delta) {
 			yPos += button.height + 10;
 
 			if (spriteClicked(button)) {
-				selectShow(i);
-				changeScreen(SCREEN_SEAT_LIST);
+				selectShow(i, function() {
+					changeScreen(SCREEN_SEAT_LIST);
+				});
 			}
 		}
 	} else if (ui.currentScreen == SCREEN_SEAT_LIST) {
@@ -394,7 +430,9 @@ app.updateClient = function(delta) {
 
 			for (let y = 0; y < THEATER_ROWS; y++) {
 				for (let x = 0; x < THEATER_COLS; x++) {
-					let button = createSeatSprite();
+					let show = showManager.shows[showManager.currentShowIndex];
+					let seat = show.seats[y*THEATER_COLS + x];
+					let button = createSeatSprite(seat);
 					ui.seatButtons.push(button);
 				}
 			}
@@ -402,6 +440,9 @@ app.updateClient = function(delta) {
 			ui.addToCartButton = createTextButtonSprite("Add to cart");
 			ui.editShowButton = createTextButtonSprite("Edit show");
 		}
+
+		if (onFirstFrame) ui.title = createTitleText("Seats selection");
+		placeAtTitlePosition(ui.title);
 
 		let seatWidth = 64;
 		let seatHeight = 64;
@@ -459,8 +500,12 @@ app.updateClient = function(delta) {
 			for (let i = 0; i < showManager.currentSeatIndices.length; i++) {
 				let cartEntry = {
 					showId: show.id,
-					seatIndex: showManager.currentSeatIndices[i]
+					seatIndex: showManager.currentSeatIndices[i],
+					price: 0,
 				};
+				//@incomplete The client controls the price, this is insecure! This should be asking the server the price
+				cartEntry.price = show.seats[cartEntry.seatIndex].price;
+
 				cart.push(cartEntry);
 			}
 			changeScreen(SCREEN_CART);
@@ -474,17 +519,19 @@ app.updateClient = function(delta) {
 			changeScreen(SCREEN_SHOW_EDITOR);
 		}
 
+		if (onFirstFrame) ui.editSeatsButton = createTextButtonSprite("Edit seats");
+		placeUnder(ui.editSeatsButton, ui.addToCartButton);
+		if (spriteClicked(ui.editSeatsButton)) changeScreen(SCREEN_SEAT_EDITOR);
+
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	} else if (ui.currentScreen == SCREEN_CART) {
-		//@stp There could be too many items to display
 		//@stp You could buy with nothing in your cart
-		//@stp The title of the show could change while a ticket in your cart, what happens?
 		if (onFirstFrame) {
 
 			for (let i = 0; i < cart.length; i++) {
 				let entry = cart[i];
 				let show = getShowById(entry.showId);
-				entry.sprite = createTextButtonSprite(show.name + ", " + convertSeatIndexToString(entry.seatIndex));
+				entry.sprite = createTextButtonSprite(show.name + ", " + convertSeatIndexToString(entry.seatIndex) + " $" + entry.price);
 				entry.removeSprite = createTextButtonSprite("X");
 				entry.removeSprite.tint = 0xA00000;
 			}
@@ -492,6 +539,10 @@ app.updateClient = function(delta) {
 			ui.buyButton = createTextButtonSprite("Buy");
 		}
 
+		if (onFirstFrame) ui.title = createTitleText("Cart");
+		placeAtTitlePosition(ui.title);
+
+		let total = 0;
 		let yPos = ui.size.y*0.15;
 		for (let i = 0; i < cart.length; i++) {
 			let entry = cart[i];
@@ -511,8 +562,12 @@ app.updateClient = function(delta) {
 				continue;
 			}
 
+			total += entry.price;
 			yPos += sprite.height + ui.size.y*0.02;
 		}
+
+		if (onFirstFrame) ui.totalField = createTextField("------ Total: $"+total + " ------");
+		placeUnder(ui.totalField, cart[cart.length-1].sprite);
 
 		ui.buyButton.x = ui.size.x*0.7 - ui.buyButton.width/2;
 		ui.buyButton.y = ui.size.y - ui.buyButton.height - ui.size.y*0.15;
@@ -538,6 +593,9 @@ app.updateClient = function(delta) {
 			ui.buyButton = createTextButtonSprite("Buy");
 		}
 
+		if (onFirstFrame) ui.title = createTitleText("Payment info");
+		placeAtTitlePosition(ui.title);
+
 		placeAtTop(ui.nameField);
 		placeUnder(ui.creditNumber, ui.nameField);
 		placeUnder(ui.cvvField, ui.creditNumber);
@@ -553,35 +611,37 @@ app.updateClient = function(delta) {
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_CART);
 	} else if (ui.currentScreen == SCREEN_RECEIPT) {
 		//@stp There could be too many items to display
-		//@stp Syncing show details if they changed
-		//@todo We need name, age, address, telephone, and email, but the user profile should already have that.
 		if (onFirstFrame) {
-			let show = showManager.shows[showManager.currentShowIndex];
+			ui.receiptFields = [];
 
-			ui.nameField = createTextField();
-			ui.nameField.text = show.name;
+			let total = 0;
+			for (let i = 0; i < cart.length; i++) {
+				let entry = cart[i];
+				total += entry.price;
 
-			ui.showDateField = createTextField();
-			ui.showDateField.text = show.date.toString();
+				let show = getShowById(entry.showId);
 
-			ui.seatsField = createTextField();
-			ui.seatsField.text = "Seats: ";
-			for (let i = 0; i < showManager.currentSeatIndices.length; i++) {
-				let seatIndex = showManager.currentSeatIndices[i];
-				ui.seatsField.text = convertSeatIndexToString(seatIndex);
-				if (i < showManager.currentSeatIndices.length-1) ui.seatsField.text += ", ";
+				let str = show.name + " " + convertSeatIndexToString(entry.seatIndex) + " $" + entry.price;
+				let field = createTextField(str);
+				ui.receiptFields.push(field);
 			}
+
+			let field = createTextField("------ Total: $"+total + " ------");
+			ui.receiptFields.push(field);
 		}
 
-		let downPad = ui.size.y*0.02;
-		ui.nameField.x = ui.size.x / 2 - ui.nameField.width / 2;
-		ui.nameField.y = ui.size.y*0.15;
+		if (onFirstFrame) ui.title = createTitleText("Receipt");
+		placeAtTitlePosition(ui.title);
 
-		ui.showDateField.x = ui.size.x / 2 - ui.showDateField.width / 2;
-		ui.showDateField.y = ui.nameField.y + ui.nameField.height + downPad;
-
-		ui.seatsField.x = ui.size.x / 2 - ui.seatsField.width / 2;
-		ui.seatsField.y = ui.showDateField.y + ui.showDateField.height + downPad;
+		for (let i = 0; i < ui.receiptFields.length; i++) {
+			let field = ui.receiptFields[i];
+			if (i == 0) {
+				placeAtTop(field);
+			} else {
+				let prevField = ui.receiptFields[i-1];
+				placeUnder(field, prevField);
+			}
+		}
 
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	} else if (ui.currentScreen == SCREEN_SHOW_EDITOR) {
@@ -600,6 +660,9 @@ app.updateClient = function(delta) {
 			ui.saveButton = createTextButtonSprite("Save");
 			ui.deleteButton = createTextButtonSprite("Delete");
 		}
+
+		if (onFirstFrame) ui.title = createTitleText("Show editor");
+		placeAtTitlePosition(ui.title);
 
 		placeAtTop(ui.showNameField);
 		placeUnder(ui.showDateField, ui.showNameField);
@@ -628,14 +691,33 @@ app.updateClient = function(delta) {
 
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
 	} else if (ui.currentScreen == SCREEN_SEAT_EDITOR) {
-		//@stp @todo
 		if (onFirstFrame) {
-
 		}
+
+		if (onFirstFrame) ui.title = createTitleText("Seat editor");
+		placeAtTitlePosition(ui.title);
+
+		if (onFirstFrame) ui.priceField = createInputTextField("New price", 4);
+		placeAtTop(ui.priceField);
+
+		if (onFirstFrame) ui.saveButton = createTextButtonSprite("Save");
+		placeAtBottom(ui.saveButton);
+		if (spriteClicked(ui.saveButton)) {
+			let show = showManager.shows[showManager.currentShowIndex];
+			let url = "includes/changeSeatPrices.php?ShowID="+show.id+"&NewPrice="+ui.priceField.text+"&SeatsStr=";
+
+			for (let i = 0; i < showManager.currentSeatIndices.length; i++) {
+				url += showManager.currentSeatIndices[i];
+				if (i != showManager.currentSeatIndices.length-1) url += "-";
+			}
+
+			makeRequest(url, function(responseText) {
+				showPopup("Seat prices were changed");
+				changeScreen(SCREEN_SHOW_LIST);
+			});
+		}
+
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
-		// http://127.0.0.1/theater/includes/changeSeatPrices.php?ShowID=32&SeatsStr=1-2-3-5-6-7&NewPrice=25
-		//@server editSeats.php?showId=3&seats=2,52,26,12&price=5
-		// 1
 	} else if (ui.currentScreen == SCREEN_REPORT) {
 		if (onFirstFrame) {
 			ui.reportField = createTextField("Hello");
@@ -644,6 +726,9 @@ app.updateClient = function(delta) {
 				ui.reportField.text = responseText;
 			});
 		}
+
+		if (onFirstFrame) ui.title = createTitleText("Report");
+		placeAtTitlePosition(ui.title);
 
 		placeAtTop(ui.reportField);
 
@@ -813,9 +898,20 @@ function changeScreenBackwards(newScreen) {
 	}
 }
 
-function createTextField() {
-	let field = new PIXI.Text("", {fontFamily: "Arial", fontSize: defaultFontSize});
+function createTextField(text) {
+	if (text === undefined) text = "";
+	let field = new PIXI.Text(text, {fontFamily: "Arial", fontSize: defaultFontSize});
+	field.style.fill = 0xA0A0A0;
 	ui.stageSprite.addChild(field);
+	return field;
+}
+
+function createTitleText(text) {
+	let field = createTextField(text);
+
+	field.style.fontSize = titleFontSize;
+	field.style.fill = 0x00FFFFFF & blueColor;
+
 	return field;
 }
 
@@ -851,7 +947,7 @@ function createTextButtonSprite(text) {
 	let pad = ui.size.x*0.01;
 	sprite.width = field.width + pad;
 	sprite.height = field.height + pad;
-	sprite.tint = 0xFF47C1F5;
+	sprite.tint = blueColor;
 
 	field.x = sprite.x + sprite.width/2 - field.width/2;
 	field.y = sprite.y + sprite.height/2 - field.height/2;
@@ -861,8 +957,12 @@ function createTextButtonSprite(text) {
 	return sprite;
 }
 
-function createSeatSprite() {
+function createSeatSprite(seat) {
 	let sprite = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
+
+	let field = new PIXI.Text("$"+seat.price, {fontFamily: "Arial", fontSize: seatPriceFontSize});
+	sprite.addChild(field);
+
 	ui.stageSprite.addChild(sprite);
 	return sprite;
 }
@@ -985,7 +1085,7 @@ function getShowsFromServer(whenDone) {
 	makeRequest(url, parseShowData);
 }
 
-function selectShow(showIndex) {
+function selectShow(showIndex, onComplete) {
 	showManager.currentShowIndex = showIndex;
 
 	let show = showManager.shows[showIndex];
@@ -1008,6 +1108,8 @@ function selectShow(showIndex) {
 			seat.price = parseInt(stringArray[i+1]);
 			show.seats.push(seat);
 		}
+
+		onComplete();
 	});
 }
 
@@ -1025,6 +1127,7 @@ function chargeCreditCard(cardName, cardNumber, cvv, expDate, amount) {
 	if (!cardNumber.startsWith("4") && !cardNumber.startsWith("5")) {
 		showPopup("Only Visa and MasterCard accepted!");
 		changeScreen(SCREEN_PAYMENT_INFO);
+		cart = [];
 		return;
 	}
 
