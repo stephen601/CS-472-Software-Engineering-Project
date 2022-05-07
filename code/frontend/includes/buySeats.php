@@ -5,6 +5,7 @@ $simulateNoMoney = False;
 include 'connection.inc.php';
 $UserID=$_GET['UserID'];
 $purchaseStr=$_GET['str'];
+$totalPrice=$_GET['TotalPrice'];
 
 if ($simulateNoMoney) {
 	echo "Error: Could not complete transaction";
@@ -22,7 +23,7 @@ if ($simulateNoMoney) {
 	}
 
 	$dt = date('Y-m-d H:i:s');
-	$sql = "INSERT INTO receipt (UserID, Purchase, FinalPrice, DateTime) VALUES ('$UserID', '$purchaseStr', 0, '$dt')";
+	$sql = "INSERT INTO receipt (UserID, Purchase, FinalPrice, DateTime) VALUES ('$UserID', '$purchaseStr', '$totalPrice', '$dt')";
 	if (!$conn->query($sql)) {
 		echo "Error: " . mysqli_error($conn);
 	}

@@ -1,15 +1,18 @@
-//@todo Make Seat price editor in the client
 //@todo Prevent two people from buying the same seat
-//@todo Make reports better
 //@todo Fix time stepper interval
 //@todo Make debugMode toggles
 //@todo Make sure site works
 //@todo Figure out presentation
 //@todo Make it so you can't select red seats
+//@todo Filter reports by date, and by show
+//@todo Guest mode
+//@todo Popup styles
+//@todo Make sure $conn works with the new Linode server
 //
 //@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
 //@todo Legend
+//@todo Make select all seats button
 
 let verboseLogging = false;
 let defaultFontSize = 35;
@@ -251,7 +254,7 @@ app.updateClient = function(delta) {
 	if (ui.currentScreen == SCREEN_NONE) {
 	} else if (ui.currentScreen == SCREEN_LOGIN) {
 		if (onFirstFrame) {
-			getShowsFromServer();
+			getShowsFromServer(false);
 
 			ui.userField = createInputTextField("Username", 50);
 			ui.passField = createInputTextField("Password", 32);
@@ -388,7 +391,7 @@ app.updateClient = function(delta) {
 			let url = "includes/newShowInsert.inc.php?showname=&showdate="+dateStr+"&showtime="+timeStr+"&showprice=0";
 			makeRequest(url, function(responseText) {
 				let showId = parseInt(responseText);
-				getShowsFromServer(function() {
+				getShowsFromServer(false, function() {
 					selectShow(getShowIndex(getShowById(showId)), function() {
 						changeScreen(SCREEN_SHOW_EDITOR);
 					});
@@ -486,11 +489,7 @@ app.updateClient = function(delta) {
 			}
 		}
 
-		if (showManager.currentSeatIndices.length == 0) {
-			ui.addToCartButton.visible = false;
-		} else {
-			ui.addToCartButton.visible = true;
-		}
+		ui.addToCartButton.visible = showManager.currentSeatIndices.length != 0;
 
 		ui.addToCartButton.x = ui.size.x*0.5 - ui.addToCartButton.width/2;
 		ui.addToCartButton.y = ui.size.y*0.9 - ui.addToCartButton.height;
@@ -513,13 +512,11 @@ app.updateClient = function(delta) {
 
 		placeAtBottomLeft(ui.editShowButton);
 
-		ui.editShowButton.visible = app.isAdmin;
-
-		if (spriteClicked(ui.editShowButton)) {
-			changeScreen(SCREEN_SHOW_EDITOR);
-		}
+		ui.editShowButton.visible = app.isAdmin && showManager.currentSeatIndices.length != 0;
+		if (spriteClicked(ui.editShowButton)) changeScreen(SCREEN_SHOW_EDITOR);
 
 		if (onFirstFrame) ui.editSeatsButton = createTextButtonSprite("Edit seats");
+		ui.editSeatsButton.visible = app.isAdmin;
 		placeUnder(ui.editSeatsButton, ui.addToCartButton);
 		if (spriteClicked(ui.editSeatsButton)) changeScreen(SCREEN_SEAT_EDITOR);
 
@@ -567,6 +564,7 @@ app.updateClient = function(delta) {
 		}
 
 		if (onFirstFrame) ui.totalField = createTextField("------ Total: $"+total + " ------");
+		//@incomplete
 		placeUnder(ui.totalField, cart[cart.length-1].sprite);
 
 		ui.buyButton.x = ui.size.x*0.7 - ui.buyButton.width/2;
@@ -574,6 +572,10 @@ app.updateClient = function(delta) {
 		if (spriteClicked(ui.buyButton)) {
 			changeScreen(SCREEN_PAYMENT_INFO);
 		}
+
+		if (onFirstFrame) ui.browseMoreButton = createTextButtonSprite("Browse more");
+		placeAtBottom(ui.browseMoreButton);
+		if (spriteClicked(ui.browseMoreButton)) changeScreen(SCREEN_SHOW_LIST);
 
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	} else if (ui.currentScreen == SCREEN_PAYMENT_INFO) {
@@ -605,7 +607,12 @@ app.updateClient = function(delta) {
 		ui.buyButton.x = ui.size.x * 0.5 - ui.buyButton.width / 2;
 		ui.buyButton.y = ui.size.y*0.85 - ui.buyButton.height;
 		if (spriteClicked(ui.buyButton)) {
-			chargeCreditCard(ui.nameField.text, ui.creditNumber.text, ui.dateField.text, 0); //@todo Figure out the price // The server probably has to do this
+			let total = 0;
+			for (let i = 0; i < cart.length; i++) {
+				total += cart[i].price;
+			}
+
+			chargeCreditCard(ui.nameField.text, ui.creditNumber.text, ui.cvvField, ui.dateField.text, total);
 		}
 
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_CART);
@@ -720,17 +727,47 @@ app.updateClient = function(delta) {
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
 	} else if (ui.currentScreen == SCREEN_REPORT) {
 		if (onFirstFrame) {
-			ui.reportField = createTextField("Hello");
 
+			ui.reportFields = [];
 			makeRequest("includes/getReport.php?ReceiptDateMin=2020-1-1&ReceiptDateMax=3000-1-1", function(responseText) {
-				ui.reportField.text = responseText;
+				console.log(responseText);
+				let lines = responseText.split("<br />");
+				for (let i = 0; i < lines.length; i++) {
+					if (lines[i].length < 2) continue;
+					let sections = lines[i].split("|");
+
+					let field = createTextField(sections[0] + " - Purchase by user " + sections[1] + " on " + sections[4] + ":");
+					ui.reportFields.push(field);
+
+					let purchaseData = sections[2].split("-");
+					for (let i = 0; i < purchaseData.length; i += 2) {
+						let show = getShowById(parseInt(purchaseData[i]));
+						let seatIndex = parseInt(purchaseData[i + 1]);
+						let field = createTextField(show.name + "-" + convertSeatIndexToString(seatIndex));
+						ui.reportFields.push(field);
+					}
+
+					{
+						let total = parseInt(sections[3]);
+						let field = createTextField("------ Total: $"+total + " ------");
+						ui.reportFields.push(field);
+					}
+				}
 			});
 		}
 
 		if (onFirstFrame) ui.title = createTitleText("Report");
 		placeAtTitlePosition(ui.title);
 
-		placeAtTop(ui.reportField);
+		for (let i = 0; i < ui.reportFields.length; i++) {
+			let field = ui.reportFields[i];
+			if (i == 0) {
+				placeAtTop(field);
+			} else {
+				let prevField = ui.reportFields[i-1];
+				placeUnder(field, prevField);
+			}
+		}
 
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	}
@@ -876,7 +913,12 @@ app.updateClient = function(delta) {
 
 function changeScreen(newScreen) {
 	if (newScreen == SCREEN_SHOW_LIST) {
-		getShowsFromServer(function() {
+		getShowsFromServer(false, function() {
+			ui.screenTransBackwards = false;
+			ui.currentScreen = newScreen;
+		});
+	} else if (newScreen == SCREEN_REPORT) {
+		getShowsFromServer(true, function() {
 			ui.screenTransBackwards = false;
 			ui.currentScreen = newScreen;
 		});
@@ -888,7 +930,12 @@ function changeScreen(newScreen) {
 
 function changeScreenBackwards(newScreen) {
 	if (newScreen == SCREEN_SHOW_LIST) {
-		getShowsFromServer(function() {
+		getShowsFromServer(false, function() {
+			ui.screenTransBackwards = true;
+			ui.currentScreen = newScreen;
+		});
+	} else if (newScreen == SCREEN_REPORT) {
+		getShowsFromServer(true, function() {
 			ui.screenTransBackwards = true;
 			ui.currentScreen = newScreen;
 		});
@@ -1046,7 +1093,7 @@ function attemptLogin(username, password) {
 	makeRequest("includes/login.inc.php?username="+username+"&password="+password, onComplete);
 }
 
-function getShowsFromServer(whenDone) {
+function getShowsFromServer(getAllShows, whenDone) {
 	function parseShowData(data) {
 		showManager.shows = [];
 
@@ -1073,14 +1120,13 @@ function getShowsFromServer(whenDone) {
 		}
 
 		if (whenDone != null) whenDone();
-		/*
-			27|test|2022-04-15|22:32:26|5<br />28|test|2022-04-16|21:32:26|5<br />29|test|2022-04-17|15:32:26|5<br />
-			*/
+		// 27|test|2022-04-15|22:32:26|5<br />28|test|2022-04-16|21:32:26|5<br />29|test|2022-04-17|15:32:26|5<br />
 	}
 
 	let date = new Date();
+	if (getAllShows) date.setFullYear(date.getFullYear()-1000);
 	let minDateStr = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate();
-	let maxDateStr = (date.getFullYear()+5) + "-" + (date.getMonth()+1) + "-" + date.getDate();
+	let maxDateStr = (date.getFullYear()+2000) + "-" + (date.getMonth()+1) + "-" + date.getDate();
 	let url = "includes/getShowReport.inc.php?showdatemin="+minDateStr+"&showdatemax="+maxDateStr;
 	makeRequest(url, parseShowData);
 }
@@ -1131,7 +1177,7 @@ function chargeCreditCard(cardName, cardNumber, cvv, expDate, amount) {
 		return;
 	}
 
-	let url = "includes/buySeats.php?UserID="+app.userId+"&str=";
+	let url = "includes/buySeats.php?UserID="+app.userId+"&TotalPrice="+amount+"&str=";
 
 	for (let i = 0; i < cart.length; i++) {
 		let entry = cart[i];
@@ -1141,6 +1187,7 @@ function chargeCreditCard(cardName, cardNumber, cvv, expDate, amount) {
 	}
 
 	makeRequest(url, function(responseText) {
+		showPopup("Your payment has been processed!");
 		changeScreen(SCREEN_RECEIPT);
 	});
 }
