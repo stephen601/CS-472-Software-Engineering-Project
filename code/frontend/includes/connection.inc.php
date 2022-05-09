@@ -1,6 +1,7 @@
 <?php
   $servername = "localhost";
 
+	// WAMP
   $username = "root";
   $password = "";
   $database = "test";
@@ -8,6 +9,14 @@
   $conn = mysqli_connect($servername, $username, $password, $database, $port);
 
 	if (!$conn) {
+		$username = "jeru";
+		$password = "losportales";
+		$database = "losportales";
+		$port = 3307;
+		$conn = mysqli_connect($servername, $username, $password, $database, $port);
+	}
+
+	if (!$conn) { // 000webhost
 		$username = "id18705581_wp_9602beb976f1a3354f5535db232f0210";
 		$password = "ZW5tdQ======";
 		$database = "id18705581_wp_9602beb976f1a3354f5535db232f0210";

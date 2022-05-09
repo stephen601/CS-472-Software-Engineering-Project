@@ -1,20 +1,19 @@
 //@todo Prevent two people from buying the same seat
-//@todo Fix time stepper interval
-//@todo Make debugMode toggles
-//@todo Make sure site works
 //@todo Figure out presentation
 //@todo Make it so you can't select red seats
-//@todo Filter reports by date, and by show
 //@todo Guest mode
 //@todo Popup styles
-//@todo Make sure $conn works with the new Linode server
 //
 //@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
 //@todo Legend
 //@todo Make select all seats button
 
-let verboseLogging = false;
+
+/*
+
+*/
+
 let defaultFontSize = 35;
 let titleFontSize = 60;
 let seatPriceFontSize = 20;
@@ -32,6 +31,7 @@ let SCREEN_RECEIPT            = 8;
 let SCREEN_SHOW_EDITOR        = 9;
 let SCREEN_SEAT_EDITOR        = 10;
 let SCREEN_REPORT             = 11;
+let SCREEN_REPORT_FILTER      = 12;
 
 let app = {};
 app.pixiApp = null;
@@ -73,7 +73,7 @@ let cart = [];
 let THEATER_ROWS = 8;
 let THEATER_COLS = 12;
 
-let debugMode = true;
+let debugMode = false;
 
 function runClient() {
 	let pixiApp = new PIXI.Application({
@@ -125,6 +125,13 @@ function runClient() {
 		ui.mouseJustUp = true;
 		ui.mouseDown = false;
 	});
+
+	ui.reportStartingDate = new Date();
+	ui.reportStartingDate.setFullYear(ui.reportStartingDate.getFullYear()-5);
+
+	ui.reportEndingDate = new Date();
+	ui.reportEndingDate.setFullYear(ui.reportEndingDate.getFullYear()+5);
+	ui.reportFilterName = "";
 
 	generateUml();
 
@@ -216,6 +223,11 @@ app.updateClient = function(delta) {
 		sprite.y = ui.size.y*0.05;
 	}
 
+	function placeAtTopRight(sprite) {
+		sprite.x = ui.size.x - sprite.width - ui.size.x*0.05;
+		sprite.y = ui.size.y*0.05;
+	}
+
 	function placeAtBottom(sprite) {
 		sprite.x = ui.size.x/2 - sprite.width/2;
 		sprite.y = ui.size.y - sprite.height - ui.size.y*0.05;
@@ -259,6 +271,7 @@ app.updateClient = function(delta) {
 			ui.userField = createInputTextField("Username", 50);
 			ui.passField = createInputTextField("Password", 32);
 			ui.loginButton = createTextButtonSprite("Login");
+			ui.guestButton = createTextButtonSprite("Browse as guest");
 			ui.instantLogin = createTextButtonSprite("Instant login");
 			ui.instantReceipt = createTextButtonSprite("Instant receipt");
 			ui.debugButton = createTextButtonSprite("Debug code");
@@ -271,7 +284,8 @@ app.updateClient = function(delta) {
 		placeAtTop(ui.userField);
 		placeUnder(ui.passField, ui.userField);
 		placeUnder(ui.loginButton, ui.passField);
-		placeUnder(ui.instantLogin, ui.loginButton);
+		placeUnder(ui.guestButton, ui.loginButton);
+		placeUnder(ui.instantLogin, ui.guestButton);
 		placeUnder(ui.instantReceipt, ui.instantLogin);
 		placeUnder(ui.debugButton, ui.instantReceipt);
 
@@ -281,10 +295,17 @@ app.updateClient = function(delta) {
 			attemptLogin(ui.userField.text, ui.passField.text);
 		}
 
+		if (spriteClicked(ui.guestButton)) {
+			showPopup("Welcome guest!");
+			changeScreen(SCREEN_SHOW_LIST);
+		}
+
+		ui.instantLogin.visible = debugMode;
 		if (spriteClicked(ui.instantLogin)) {
 			attemptLogin("Jeru", "testPass");
 		}
 
+		ui.debugButton.visible = debugMode;
 		if (spriteClicked(ui.debugButton)) {
 			// let url = "includes/newShowInsert.inc.php?showname=testShow&showdate=2022-4-21&showtime=15:25:00&showprice=0";
 			// let url = "includes/newDeleteShow.php?ShowID=31";
@@ -297,6 +318,7 @@ app.updateClient = function(delta) {
 			// });
 		}
 
+		ui.instantReceipt.visible = debugMode;
 		if (spriteClicked(ui.instantReceipt)) {
 			cart = [
 				{showId: 34, seatIndex: 1, price: 5}, 
@@ -312,11 +334,16 @@ app.updateClient = function(delta) {
 			changeScreen(SCREEN_CREATE_ACCOUNT);
 		}
 
+		if (onFirstFrame) ui.startDebugModeButton = createTextButtonSprite("Enable debug mode");
+		placeAtBottom(ui.startDebugModeButton);
+		ui.startDebugModeButton.visible = false;
+		if (spriteClicked(ui.startDebugModeButton)) debugMode = !debugMode;
 	} else if (ui.currentScreen == SCREEN_CREATE_ACCOUNT) {
 		if (onFirstFrame) {
 			ui.userNameField = createInputTextField("Username", 50);
 			ui.passwordField = createInputTextField("Password", 32);
 			ui.dobPicker = createDatePicker("Dob");
+			ui.dobPicker.values[2] = 1990;
 			ui.phoneField = createInputTextField("Phone number", 16);
 			ui.addressField = createInputTextField("Address", 64);
 			ui.emailField = createInputTextField("Email", 64);
@@ -343,7 +370,7 @@ app.updateClient = function(delta) {
 			url += "Address="+ui.addressField.text + "&";
 			url += "Email="+ui.emailField.text;
 			makeRequest(url, function() {
-				showPopup("You user has been created, you can sign in now");
+				showPopup("You user has been created\nNow you can sign in");
 				changeScreen(SCREEN_LOGIN);
 			});
 		}
@@ -363,13 +390,15 @@ app.updateClient = function(delta) {
 
 			for (let i = 0; i < showManager.shows.length; i++) {
 				let show = showManager.shows[i];
-				let buttonLabel = show.name + " at:";
-				buttonLabel += (show.date.getMonth()+1) + "-";
-				buttonLabel += show.date.getDate() + "-";
-				buttonLabel += show.date.getFullYear() + " ";
+				let buttonLabel = show.name + " - ";
+				buttonLabel += (show.date.getMonth()+1) + "/";
+				buttonLabel += show.date.getDate() + " ";
 				buttonLabel += show.date.getHours() + ":";
-				buttonLabel += show.date.getMinutes() + ":";
-				buttonLabel += show.date.getSeconds();
+				if (show.date.getMinutes() < 10) {
+					buttonLabel += "0"+show.date.getMinutes();
+				} else {
+					buttonLabel += show.date.getMinutes();
+				}
 				let sprite = createTextButtonSprite(buttonLabel);
 				ui.showButtons.push(sprite);
 			}
@@ -399,6 +428,7 @@ app.updateClient = function(delta) {
 			});
 		}
 
+		ui.cartButton.visible = cart.length > 0;
 		ui.cartButton.x = ui.size.x*0.3 - ui.cartButton.width/2;
 		ui.cartButton.y = ui.size.y*0.9 - ui.cartButton.height;
 		if (spriteClicked(ui.cartButton)) {
@@ -489,7 +519,7 @@ app.updateClient = function(delta) {
 			}
 		}
 
-		ui.addToCartButton.visible = showManager.currentSeatIndices.length != 0;
+		ui.addToCartButton.visible = app.userId != 0 && showManager.currentSeatIndices.length != 0;
 
 		ui.addToCartButton.x = ui.size.x*0.5 - ui.addToCartButton.width/2;
 		ui.addToCartButton.y = ui.size.y*0.9 - ui.addToCartButton.height;
@@ -512,11 +542,11 @@ app.updateClient = function(delta) {
 
 		placeAtBottomLeft(ui.editShowButton);
 
-		ui.editShowButton.visible = app.isAdmin && showManager.currentSeatIndices.length != 0;
+		ui.editShowButton.visible = app.isAdmin;
 		if (spriteClicked(ui.editShowButton)) changeScreen(SCREEN_SHOW_EDITOR);
 
 		if (onFirstFrame) ui.editSeatsButton = createTextButtonSprite("Edit seats");
-		ui.editSeatsButton.visible = app.isAdmin;
+		ui.editSeatsButton.visible = app.isAdmin && showManager.currentSeatIndices.length != 0;
 		placeUnder(ui.editSeatsButton, ui.addToCartButton);
 		if (spriteClicked(ui.editSeatsButton)) changeScreen(SCREEN_SEAT_EDITOR);
 
@@ -563,10 +593,15 @@ app.updateClient = function(delta) {
 			yPos += sprite.height + ui.size.y*0.02;
 		}
 
-		if (onFirstFrame) ui.totalField = createTextField("------ Total: $"+total + " ------");
-		//@incomplete
-		placeUnder(ui.totalField, cart[cart.length-1].sprite);
+		if (onFirstFrame) ui.totalField = createTextField();
+		ui.totalField.text = "------ Total: $"+total + " ------";
+		if (cart.length == 0) { 
+			placeAtTop(ui.totalField);
+		} else {
+			placeUnder(ui.totalField, cart[cart.length-1].sprite);
+		}
 
+		ui.buyButton.visible = app.userId != 0;
 		ui.buyButton.x = ui.size.x*0.7 - ui.buyButton.width/2;
 		ui.buyButton.y = ui.size.y - ui.buyButton.height - ui.size.y*0.15;
 		if (spriteClicked(ui.buyButton)) {
@@ -589,6 +624,7 @@ app.updateClient = function(delta) {
 			ui.creditNumber = createInputTextField("Credit Card Number", 32);
 			ui.cvvField = createInputTextField("CVV", 4);
 			ui.dateField = createDatePicker("Exp");
+			ui.dateField.values[2] = 2000;
 
 			ui.zipField = createInputTextField("Zip", 16);
 
@@ -635,6 +671,8 @@ app.updateClient = function(delta) {
 
 			let field = createTextField("------ Total: $"+total + " ------");
 			ui.receiptFields.push(field);
+
+			cart = [];
 		}
 
 		if (onFirstFrame) ui.title = createTitleText("Receipt");
@@ -727,9 +765,11 @@ app.updateClient = function(delta) {
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
 	} else if (ui.currentScreen == SCREEN_REPORT) {
 		if (onFirstFrame) {
-
 			ui.reportFields = [];
-			makeRequest("includes/getReport.php?ReceiptDateMin=2020-1-1&ReceiptDateMax=3000-1-1", function(responseText) {
+			let minDateStr = ui.reportStartingDate.getFullYear() + "-" + (ui.reportStartingDate.getMonth()+1) + "-" + ui.reportStartingDate.getDate();
+			let maxDateStr = ui.reportEndingDate.getFullYear() + "-" + (ui.reportEndingDate.getMonth()+1) + "-" + ui.reportEndingDate.getDate();
+			let url = "includes/getReport.php?ReceiptDateMin="+minDateStr+"&ReceiptDateMax="+maxDateStr;
+			makeRequest(url, function(responseText) {
 				console.log(responseText);
 				let lines = responseText.split("<br />");
 				for (let i = 0; i < lines.length; i++) {
@@ -742,6 +782,7 @@ app.updateClient = function(delta) {
 					let purchaseData = sections[2].split("-");
 					for (let i = 0; i < purchaseData.length; i += 2) {
 						let show = getShowById(parseInt(purchaseData[i]));
+						if (ui.reportFilterName != "" && show.name.indexOf(ui.reportFilterName) == -1) continue;
 						let seatIndex = parseInt(purchaseData[i + 1]);
 						let field = createTextField(show.name + "-" + convertSeatIndexToString(seatIndex));
 						ui.reportFields.push(field);
@@ -769,7 +810,46 @@ app.updateClient = function(delta) {
 			}
 		}
 
+		if (onFirstFrame) ui.filterButton = createTextButtonSprite("Filter");
+		placeAtTopRight(ui.filterButton);
+		if (spriteClicked(ui.filterButton)) changeScreen(SCREEN_REPORT_FILTER);
+
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
+	} else if (ui.currentScreen == SCREEN_REPORT_FILTER) {
+
+		if (onFirstFrame) {
+			ui.startingDatePicker = createDatePicker("Report starting date");
+			ui.startingDatePicker.values = [ui.reportStartingDate.getMonth()+1, ui.reportStartingDate.getDate(), ui.reportStartingDate.getFullYear()];
+			ui.endingDatePicker = createDatePicker("Report ending date");
+			ui.endingDatePicker.values = [ui.reportEndingDate.getMonth()+1, ui.reportEndingDate.getDate(), ui.reportEndingDate.getFullYear()];
+			console.log(ui.reportEndingDate);
+		}
+
+		if (onFirstFrame) {
+			ui.filterTextField = createInputTextField("Show name (optional)", 99);
+			ui.filterTextField.text = ui.reportFilterName;
+		}
+		placeAtTop(ui.filterTextField);
+
+		placeUnder(ui.startingDatePicker, ui.filterTextField);
+		placeUnder(ui.endingDatePicker, ui.startingDatePicker);
+
+		if (onFirstFrame) ui.saveButton = createTextButtonSprite("Save");
+		placeAtBottom(ui.saveButton);
+		if (spriteClicked(ui.saveButton)) {
+			ui.reportStartingDate.setMonth(ui.startingDatePicker.values[0]-1);
+			ui.reportStartingDate.setDate(ui.startingDatePicker.values[1]);
+			ui.reportStartingDate.setFullYear(ui.startingDatePicker.values[2]);
+
+			ui.reportEndingDate.setMonth(ui.endingDatePicker.values[0]-1);
+			ui.reportEndingDate.setDate(ui.endingDatePicker.values[1]);
+			ui.reportEndingDate.setFullYear(ui.endingDatePicker.values[2]);
+			changeScreenBackwards(SCREEN_REPORT);
+
+			ui.reportFilterName = ui.filterTextField.text;
+		}
+
+		simulateBackButton(onFirstFrame, elapsed, SCREEN_REPORT);
 	}
 
 	for (let i = 0; i < ui.pixiInputFields.length; i++) { // Update input fields
@@ -858,10 +938,10 @@ app.updateClient = function(delta) {
 			if (picker.dateTimeMode == "date") {
 				if (i == 0) picker.values[i] = wrap(picker.values[i], 1, 12);
 				if (i == 1) picker.values[i] = wrap(picker.values[i], 1, 31);
-				if (i == 2) picker.values[i] = wrap(picker.values[i], 1970, 3000); // eol lol
+				if (i == 2) picker.values[i] = wrap(picker.values[i], 1000, 4000);
 			} else {
 				if (i == 0) picker.values[i] = wrap(picker.values[i], 0, 23);
-				if (i == 1) picker.values[i] = wrap(picker.values[i], 0, 59);
+				if (i == 1) picker.values[i] = wrap(picker.values[i], 0, 55);
 			}
 
 			ticker.container.x = xPos;
@@ -963,8 +1043,6 @@ function createTitleText(text) {
 }
 
 function createInputTextField(hintText, maxLen) {
-	if (verboseLogging) console.log("Input text field created"); //@stp What if you accidently create a sprite every frame? Then you'll see this log message
-
 	let field = new PIXI.TextInput({
 		input: {
 			fontSize: '25pt',
@@ -1086,7 +1164,7 @@ function attemptLogin(username, password) {
 		let stringArray = responseText.split("|");
 		app.userId = parseInt(stringArray[0]);
 		app.isAdmin = parseInt(stringArray[1]);
-		showPopup("Welcome user "+app.userId);
+		showPopup("Welcome user "+username);
 		changeScreen(SCREEN_SHOW_LIST);
 	}
 
@@ -1123,11 +1201,18 @@ function getShowsFromServer(getAllShows, whenDone) {
 		// 27|test|2022-04-15|22:32:26|5<br />28|test|2022-04-16|21:32:26|5<br />29|test|2022-04-17|15:32:26|5<br />
 	}
 
-	let date = new Date();
-	if (getAllShows) date.setFullYear(date.getFullYear()-1000);
-	let minDateStr = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate();
-	let maxDateStr = (date.getFullYear()+2000) + "-" + (date.getMonth()+1) + "-" + date.getDate();
+	let startingDate = new Date();
+	let endingDate = new Date();
+	endingDate.setFullYear(endingDate.getFullYear()+1000);
+
+	if (getAllShows) {
+		startingDate = ui.reportStartingDate;
+		endingDate = ui.reportEndingDate;
+	}
+	let minDateStr = startingDate.getFullYear() + "-" + (startingDate.getMonth()+1) + "-" + startingDate.getDate();
+	let maxDateStr = endingDate.getFullYear() + "-" + (endingDate.getMonth()+1) + "-" + endingDate.getDate();
 	let url = "includes/getShowReport.inc.php?showdatemin="+minDateStr+"&showdatemax="+maxDateStr;
+	console.log("URL: "+url);
 	makeRequest(url, parseShowData);
 }
 
@@ -1173,7 +1258,6 @@ function chargeCreditCard(cardName, cardNumber, cvv, expDate, amount) {
 	if (!cardNumber.startsWith("4") && !cardNumber.startsWith("5")) {
 		showPopup("Only Visa and MasterCard accepted!");
 		changeScreen(SCREEN_PAYMENT_INFO);
-		cart = [];
 		return;
 	}
 
