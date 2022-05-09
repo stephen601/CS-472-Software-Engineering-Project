@@ -9,12 +9,12 @@ $Email=$_GET['Email'];
 
 $conn = require'connection.inc.php';
 
-$sql = "SELECT * FROM user_Profile WHERE Username LIKE '$Username'";
+$sql = "SELECT * FROM user_profile WHERE Username LIKE '$Username'";
 $result = mysqli_query($conn, $sql);
 $row = mysqli_fetch_assoc($result);
 
 if (!$result || !$row) {
-	$sql="INSERT INTO user_Profile (Username, Password, IsAdmin, Dob, Phone, Address, Email) VALUES ('$Username', '$Password', '0', '$Dob', '$Phone', '$Address', '$Email')";
+	$sql="INSERT INTO user_profile (Username, Password, IsAdmin, Dob, Phone, Address, Email) VALUES ('$Username', '$Password', '0', '$Dob', '$Phone', '$Address', '$Email')";
 	if (mysqli_query($conn, $sql)) {
 		echo "$conn->insert_id";
 	} else {

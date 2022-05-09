@@ -1,13 +1,16 @@
 //@todo Prevent two people from buying the same seat
 //@todo Figure out presentation
 //@todo Make it so you can't select red seats
-//@todo Guest mode
 //@todo Popup styles
 //
 //@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
 //@todo Legend
 //@todo Make select all seats button
+//
+//@todo Back button on create account screen
+//@todo Performance
+//@todo Mark seats in cart?
 
 
 /*
@@ -17,7 +20,8 @@
 let defaultFontSize = 35;
 let titleFontSize = 60;
 let seatPriceFontSize = 20;
-let blueColor = 0xFF47C1F5;
+let mainColor = 0xFFc8d5db;
+let titleColor = 0xFF98c0d6;
 
 let SCREEN_NONE               = 0;
 let SCREEN_LOGIN              = 1;
@@ -94,8 +98,8 @@ function runClient() {
 	ui.foregroundSprite = new PIXI.Sprite();
 	app.pixiApp.stage.addChild(ui.foregroundSprite);
 
-	ui.stageInteractionSprite = new PIXI.Sprite.from("assets/white.png");
-	ui.stageInteractionSprite.tint = 0xFF262626;
+	ui.stageInteractionSprite = new PIXI.Sprite.from("assets/grad.png");
+	ui.stageInteractionSprite.tint = 0x404040;
 	ui.stageSprite.addChild(ui.stageInteractionSprite);
 
 	ui.stageSprite.interactive = true;
@@ -219,13 +223,13 @@ app.updateClient = function(delta) {
 	}
 
 	function placeAtTopLeft(sprite) {
-		sprite.x = ui.size.x*0.05;
-		sprite.y = ui.size.y*0.05;
+		sprite.x = ui.size.x*0.01;
+		sprite.y = ui.size.y*0.02;
 	}
 
 	function placeAtTopRight(sprite) {
-		sprite.x = ui.size.x - sprite.width - ui.size.x*0.05;
-		sprite.y = ui.size.y*0.05;
+		sprite.x = ui.size.x - sprite.width - ui.size.x*0.01;
+		sprite.y = ui.size.y*0.02;
 	}
 
 	function placeAtBottom(sprite) {
@@ -336,7 +340,7 @@ app.updateClient = function(delta) {
 
 		if (onFirstFrame) ui.startDebugModeButton = createTextButtonSprite("Enable debug mode");
 		placeAtBottom(ui.startDebugModeButton);
-		ui.startDebugModeButton.visible = false;
+		// ui.startDebugModeButton.visible = false;
 		if (spriteClicked(ui.startDebugModeButton)) debugMode = !debugMode;
 	} else if (ui.currentScreen == SCREEN_CREATE_ACCOUNT) {
 		if (onFirstFrame) {
@@ -776,21 +780,33 @@ app.updateClient = function(delta) {
 					if (lines[i].length < 2) continue;
 					let sections = lines[i].split("|");
 
-					let field = createTextField(sections[0] + " - Purchase by user " + sections[1] + " on " + sections[4] + ":");
+					let field = createTextField(sections[0] + ". Purchase by user " + sections[1] + "\non " + sections[4]);
+					field.style.fill = 0xFFFFFF;
 					ui.reportFields.push(field);
 
 					let purchaseData = sections[2].split("-");
 					for (let i = 0; i < purchaseData.length; i += 2) {
-						let show = getShowById(parseInt(purchaseData[i]));
+						let showId = parseInt(purchaseData[i]);
+						let show = getShowById(showId);
 						if (ui.reportFilterName != "" && show.name.indexOf(ui.reportFilterName) == -1) continue;
 						let seatIndex = parseInt(purchaseData[i + 1]);
-						let field = createTextField(show.name + "-" + convertSeatIndexToString(seatIndex));
+
+						let showName;
+						if (show) {
+							showName = show.name;
+						} else {
+							showName = "???("+showId+")";
+						}
+
+						let field = createTextField(showName + "-" + convertSeatIndexToString(seatIndex));
+						field.style.fill = 0xFFFFFF;
 						ui.reportFields.push(field);
 					}
 
 					{
 						let total = parseInt(sections[3]);
 						let field = createTextField("------ Total: $"+total + " ------");
+						field.style.fill = 0xFFFFFF;
 						ui.reportFields.push(field);
 					}
 				}
@@ -851,6 +867,14 @@ app.updateClient = function(delta) {
 
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_REPORT);
 	}
+
+	let bgTint = 0x404040;
+	if (ui.currentScreen == SCREEN_RECEIPT) {
+		bgTint = 0x203820;
+	} else {
+		bgTint = 0x404040;
+	}
+	ui.stageInteractionSprite.tint = bgTint;
 
 	for (let i = 0; i < ui.pixiInputFields.length; i++) { // Update input fields
 		let field = ui.pixiInputFields[i];
@@ -1037,7 +1061,10 @@ function createTitleText(text) {
 	let field = createTextField(text);
 
 	field.style.fontSize = titleFontSize;
-	field.style.fill = 0x00FFFFFF & blueColor;
+	field.style.fill = 0x00FFFFFF & titleColor;
+	// field.style.text
+
+	// ui.titleField = field;
 
 	return field;
 }
@@ -1045,8 +1072,8 @@ function createTitleText(text) {
 function createInputTextField(hintText, maxLen) {
 	let field = new PIXI.TextInput({
 		input: {
-			fontSize: '25pt',
-			padding: '14px',
+			fontSize: '20pt',
+			padding: '5px',
 			width: '500px',
 			color: '#26272E'
 		}, box: {
@@ -1072,7 +1099,7 @@ function createTextButtonSprite(text) {
 	let pad = ui.size.x*0.01;
 	sprite.width = field.width + pad;
 	sprite.height = field.height + pad;
-	sprite.tint = blueColor;
+	sprite.tint = mainColor;
 
 	field.x = sprite.x + sprite.width/2 - field.width/2;
 	field.y = sprite.y + sprite.height/2 - field.height/2;
@@ -1095,10 +1122,15 @@ function createSeatSprite(seat) {
 function spriteClicked(sprite) {
 	if (!sprite.visible) return false;
 
+	let field = sprite.children[0];
+
 	let hoveringButton = false;
 	let rect = sprite.getBounds();
 	if (ui.mouse.x > rect.x && ui.mouse.x < rect.x + rect.width && ui.mouse.y > rect.y && ui.mouse.y < rect.y + rect.height) {
 		hoveringButton = true;
+		field.style.fill = 0x1d3336;
+	} else {
+		field.style.fill = 0x000000;
 	}
 
 	if (ui.mouseJustDown && hoveringButton) {
@@ -1285,14 +1317,20 @@ function showPopup(text) {
 	}
 
 	let field = new PIXI.Text(text, {fontFamily: "Arial", fontSize: defaultFontSize});
+	field.style.fill = 0xEEEEEE;
+
+	let pad = field.width*0.1;
 
 	ui.popup = new PIXI.NineSlicePlane(PIXI.Texture.from("assets/nineSliceButton.png"), 32, 32, 32, 32);
-	ui.popup.width = field.width;
-	ui.popup.height = field.height;
+	ui.popup.width = field.width + pad;
+	ui.popup.height = field.height + pad;
+
+	field.x += (ui.popup.width - field.width)/2;
+	field.y += (ui.popup.height - field.height)/2;
 	ui.popup.addChild(field);
 
 	ui.popup.x = ui.size.x/2 - ui.popup.width/2;
-	ui.popup.y = ui.size.y - ui.popup.height - ui.size.y*0.05;
+	ui.popup.y = ui.size.y - ui.popup.height - ui.size.y*0.15;
 	ui.popup.tint = 0xFF404040;
 
 	ui.popupTime = 0;
@@ -1497,4 +1535,22 @@ function tweenEase(p, ease) {
 	}
 
 	return 0;
+}
+
+function lerpColor(color1, color2, perc) {
+	let r1 = (color1 >> 16) & 0xFF;
+	let g1 = (color1 >> 8) & 0xFF;
+	let b1 = (color1     ) & 0xFF;
+
+	let r2 = (color2 >> 16) & 0xFF;
+	let g2 = (color2 >> 8) & 0xFF;
+	let b2 = (color2     ) & 0xFF;
+
+	if (perc > 1) perc = 1;
+	if (perc < 0) perc = 0;
+
+	let r = lerp(r1, r2, perc);
+	let g = lerp(g1, g2, perc);
+	let b = lerp(b1, b2, perc);
+	return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
 }
