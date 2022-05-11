@@ -1,6 +1,6 @@
 ## Creating an account 
 
-![](assets/test.webm)
+![](assets/test.gif)
 
 ## Logging in 
 
