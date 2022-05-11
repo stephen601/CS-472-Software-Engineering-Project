@@ -1,6 +1,6 @@
 ## Creating an account 
 
-![](assets/1creatingAnAccount.mp4)
+![](assets/test.webm)
 
 ## Logging in 
 
