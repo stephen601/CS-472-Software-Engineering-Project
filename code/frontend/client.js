@@ -340,7 +340,7 @@ app.updateClient = function(delta) {
 
 		if (onFirstFrame) ui.startDebugModeButton = createTextButtonSprite("Enable debug mode");
 		placeAtBottomRight(ui.startDebugModeButton);
-		// ui.startDebugModeButton.visible = false;
+		ui.startDebugModeButton.visible = false;
 		if (spriteClicked(ui.startDebugModeButton)) debugMode = !debugMode;
 	} else if (ui.currentScreen == SCREEN_CREATE_ACCOUNT) {
 		if (onFirstFrame) {
