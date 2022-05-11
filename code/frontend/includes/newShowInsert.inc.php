@@ -9,11 +9,10 @@ $newShow->ShowName=$showname;
 $newShow->ShowDate=$showdate;
 $newShow->ShowTime=$showtime;
 $newShow->ShowPrice=$showprice;
-$test=$newShow->checkShow();
-//var_dump($test);
-if($test==TRUE){
-    $results= $newShow->setShow();
-}else{
-    echo "Event is already in the system. Please select different Event and try again.";
-}
+// $test=$newShow->checkShow();
+// if($test==0){
+$results = $newShow->setShow();
+// }else{
+// 	echo $test;
+// }
 

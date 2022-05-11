@@ -1,23 +1,18 @@
+//@todo Scroll for report screen
+//
 //@todo Prevent two people from buying the same seat
 //@todo Figure out presentation
-//@todo Make it so you can't select red seats
 //@todo Popup styles
+//@todo Add hidden password
 //
-//@todo Do background for plain text fields
 //@todo Prevent cart and show list screen from overflowing the layout
 //@todo Legend
-//@todo Make select all seats button
 //
-//@todo Back button on create account screen
 //@todo Performance
 //@todo Mark seats in cart?
 
 
-/*
-
-*/
-
-let defaultFontSize = 35;
+let defaultFontSize = 35; // These are reset later
 let titleFontSize = 60;
 let seatPriceFontSize = 20;
 let mainColor = 0xFFc8d5db;
@@ -137,7 +132,7 @@ function runClient() {
 	ui.reportEndingDate.setFullYear(ui.reportEndingDate.getFullYear()+5);
 	ui.reportFilterName = "";
 
-	generateUml();
+	// generateUml();
 
 	changeScreen(SCREEN_LOGIN);
 }
@@ -194,6 +189,11 @@ app.updateClient = function(delta) {
 
 	let isPortraitMode = false;
 	if (ui.size.y > ui.size.x) isPortraitMode = true;
+
+	let sizeScale = ui.size.y/1080;
+	defaultFontSize = 35 * sizeScale;
+	titleFontSize = 60 * sizeScale;
+	seatPriceFontSize = 20 * sizeScale;
 
 	ui.stageInteractionSprite.width = ui.size.x;
 	ui.stageInteractionSprite.height = ui.size.y;
@@ -306,7 +306,7 @@ app.updateClient = function(delta) {
 
 		ui.instantLogin.visible = debugMode;
 		if (spriteClicked(ui.instantLogin)) {
-			attemptLogin("Jeru", "testPass");
+			attemptLogin("admin", "testPass");
 		}
 
 		ui.debugButton.visible = debugMode;
@@ -339,7 +339,7 @@ app.updateClient = function(delta) {
 		}
 
 		if (onFirstFrame) ui.startDebugModeButton = createTextButtonSprite("Enable debug mode");
-		placeAtBottom(ui.startDebugModeButton);
+		placeAtBottomRight(ui.startDebugModeButton);
 		// ui.startDebugModeButton.visible = false;
 		if (spriteClicked(ui.startDebugModeButton)) debugMode = !debugMode;
 	} else if (ui.currentScreen == SCREEN_CREATE_ACCOUNT) {
@@ -423,6 +423,7 @@ app.updateClient = function(delta) {
 			let timeStr = date.getHours() + ":00:00";
 			let url = "includes/newShowInsert.inc.php?showname=&showdate="+dateStr+"&showtime="+timeStr+"&showprice=0";
 			makeRequest(url, function(responseText) {
+				console.log("response: "+responseText);
 				let showId = parseInt(responseText);
 				getShowsFromServer(false, function() {
 					selectShow(getShowIndex(getShowById(showId)), function() {
@@ -518,7 +519,7 @@ app.updateClient = function(delta) {
 			let seat = show.seats[i];
 			if (seat.userId != 0) button.tint = 0x900000;
 			if (showManager.currentSeatIndices.indexOf(i) != -1) button.tint = 0xFFFF00;
-			if (spriteClicked(button)) {
+			if (spriteClicked(button) && seat.userId == 0) {
 				selectSeat(i);
 			}
 		}
@@ -554,11 +555,20 @@ app.updateClient = function(delta) {
 		placeUnder(ui.editSeatsButton, ui.addToCartButton);
 		if (spriteClicked(ui.editSeatsButton)) changeScreen(SCREEN_SEAT_EDITOR);
 
+		if (onFirstFrame) ui.selectAllSeatsButton = createTextButtonSprite("Select all");
+		ui.selectAllSeatsButton.visible = app.isAdmin;
+		placeAtBottomRight(ui.selectAllSeatsButton);
+		if (spriteClicked(ui.selectAllSeatsButton)) {
+			let show = showManager.shows[showManager.currentShowIndex];
+			for (let i = 0; i < show.seats.length; i++) {
+				let seat = show.seats[i];
+				if (seat.userId == 0) selectSeat(i);
+			}
+		}
+
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SHOW_LIST);
 	} else if (ui.currentScreen == SCREEN_CART) {
-		//@stp You could buy with nothing in your cart
 		if (onFirstFrame) {
-
 			for (let i = 0; i < cart.length; i++) {
 				let entry = cart[i];
 				let show = getShowById(entry.showId);
@@ -594,7 +604,7 @@ app.updateClient = function(delta) {
 			}
 
 			total += entry.price;
-			yPos += sprite.height + ui.size.y*0.02;
+			yPos += sprite.height + ui.size.y*0.005;
 		}
 
 		if (onFirstFrame) ui.totalField = createTextField();
@@ -682,13 +692,18 @@ app.updateClient = function(delta) {
 		if (onFirstFrame) ui.title = createTitleText("Receipt");
 		placeAtTitlePosition(ui.title);
 
+		function placeUnderTight(below, above) {
+			below.x = above.x + above.width/2 - below.width/2;
+			below.y = above.y + above.height;
+		}
+
 		for (let i = 0; i < ui.receiptFields.length; i++) {
 			let field = ui.receiptFields[i];
 			if (i == 0) {
 				placeAtTop(field);
 			} else {
 				let prevField = ui.receiptFields[i-1];
-				placeUnder(field, prevField);
+				placeUnderTight(field, prevField);
 			}
 		}
 
@@ -740,9 +755,6 @@ app.updateClient = function(delta) {
 
 		simulateBackButton(onFirstFrame, elapsed, SCREEN_SEAT_LIST);
 	} else if (ui.currentScreen == SCREEN_SEAT_EDITOR) {
-		if (onFirstFrame) {
-		}
-
 		if (onFirstFrame) ui.title = createTitleText("Seat editor");
 		placeAtTitlePosition(ui.title);
 
@@ -762,7 +774,9 @@ app.updateClient = function(delta) {
 
 			makeRequest(url, function(responseText) {
 				showPopup("Seat prices were changed");
-				changeScreen(SCREEN_SHOW_LIST);
+				selectShow(showManager.currentShowIndex, function() {
+					changeScreen(SCREEN_SEAT_LIST);
+				});
 			});
 		}
 
@@ -1120,17 +1134,21 @@ function createSeatSprite(seat) {
 }
 
 function spriteClicked(sprite) {
+	if (!sprite) return false;
 	if (!sprite.visible) return false;
 
-	let field = sprite.children[0];
 
 	let hoveringButton = false;
 	let rect = sprite.getBounds();
+	let fillColor = 0x000000;
 	if (ui.mouse.x > rect.x && ui.mouse.x < rect.x + rect.width && ui.mouse.y > rect.y && ui.mouse.y < rect.y + rect.height) {
 		hoveringButton = true;
-		field.style.fill = 0x1d3336;
-	} else {
-		field.style.fill = 0x000000;
+		fillColor = 0x1d3336;
+	}
+
+	let field = sprite.children[0];
+	if (field && field.style) {
+		field.style.fill = fillColor;
 	}
 
 	if (ui.mouseJustDown && hoveringButton) {
@@ -1196,7 +1214,7 @@ function attemptLogin(username, password) {
 		let stringArray = responseText.split("|");
 		app.userId = parseInt(stringArray[0]);
 		app.isAdmin = parseInt(stringArray[1]);
-		showPopup("Welcome user "+username);
+		showPopup("Welcome "+username);
 		changeScreen(SCREEN_SHOW_LIST);
 	}
 

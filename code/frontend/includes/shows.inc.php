@@ -17,16 +17,14 @@ class Shows{
 			echo $conn->insert_id;
 
 			// Insert the new seats
-			$sql = "INSERT INTO Seats ";
+			$sql = "INSERT INTO seats ";
 			$sql .= "(ShowID, SeatID, SeatPrice, UserID) ";
 			$sql .= "VALUES ";
 			$SEATS_MAX = 96;
 			for ($i = 0; $i < $SEATS_MAX; $i++) {
 				$sql .= "(";
-				$sql .= $conn->insert_id . ",";
-				$sql .= $i . ",";
-				$sql .= "5,";
-				$sql .= "0)";
+				$sql .= $conn->insert_id . ", ";
+				$sql .= "$i, 5, 0)";
 				if ($i == $SEATS_MAX-1) {
 					$sql .= ";";
 				} else {
@@ -60,7 +58,7 @@ class Shows{
 			echo "Record deleted successfully !";
 
 			// Delete shows
-			$sql = "DELETE FROM Seats WHERE ShowID=$ShowID;";
+			$sql = "DELETE FROM seats WHERE ShowID=$ShowID;";
 			if (!mysqli_query($conn, $sql)) echo "Warning: Failed to delete seats!";
 		} else {
 			echo "Error: " . $sql . " " . mysqli_error($conn);
@@ -73,9 +71,9 @@ class Shows{
 		$row=mysqli_fetch_assoc($result);
 
 		if ($result && $row && $row["ShowName"]==$this->ShowName) {
-			return FALSE;
+			return $row['ShowID'];
 		} else {
-			return TRUE;
+			return 0;
 		}
 	} 
 	public function getShow(){
